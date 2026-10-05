@@ -2,25 +2,28 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="application">
-      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+      <UniqueIdentifier>{c6556c68-62fa-46b4-ba62-737c814f3702}</UniqueIdentifier>
     </Filter>
     <Filter Include="application\scene">
-      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000002}</UniqueIdentifier>
+      <UniqueIdentifier>{a740163a-e337-4ed1-b228-771561908905}</UniqueIdentifier>
     </Filter>
     <Filter Include="application\scene\Sample">
-      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000003}</UniqueIdentifier>
+      <UniqueIdentifier>{1adbaf7a-fcb8-4a35-9a18-04882ce43cc4}</UniqueIdentifier>
     </Filter>
     <Filter Include="application\scene\Title">
-      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000004}</UniqueIdentifier>
+      <UniqueIdentifier>{82806b43-df15-430f-890e-547f137aa931}</UniqueIdentifier>
     </Filter>
     <Filter Include="application\scene\Option">
-      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000005}</UniqueIdentifier>
+      <UniqueIdentifier>{2263936b-38ac-4fc4-9f1b-9779a31074b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="application\scene\Member">
+      <UniqueIdentifier>{09b153f7-40cc-41a3-97cc-8cc43ae1aeab}</UniqueIdentifier>
     </Filter>
     <Filter Include="application\settings">
-      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000006}</UniqueIdentifier>
+      <UniqueIdentifier>{a0397c94-7c29-42cd-9b56-17e27bd064e4}</UniqueIdentifier>
     </Filter>
     <Filter Include="application\audio">
-      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000007}</UniqueIdentifier>
+      <UniqueIdentifier>{4eba0ed1-8bf0-4e44-bb0b-002251f11a3b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -40,6 +43,21 @@
     </ClCompile>
     <ClCompile Include="application\scene\Option\OptionScene.cpp">
       <Filter>application\scene\Option</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Member\OnoderaScene.cpp">
+      <Filter>application\scene\Member</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Member\NagaiScene.cpp">
+      <Filter>application\scene\Member</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Member\SatouScene.cpp">
+      <Filter>application\scene\Member</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Member\TsubokiScene.cpp">
+      <Filter>application\scene\Member</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Member\MiyamotoScene.cpp">
+      <Filter>application\scene\Member</Filter>
     </ClCompile>
     <ClCompile Include="application\settings\Settings.cpp">
       <Filter>application\settings</Filter>
@@ -67,6 +85,21 @@
     </ClInclude>
     <ClInclude Include="application\scene\Option\OptionScene.h">
       <Filter>application\scene\Option</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Member\OnoderaScene.h">
+      <Filter>application\scene\Member</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Member\NagaiScene.h">
+      <Filter>application\scene\Member</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Member\SatouScene.h">
+      <Filter>application\scene\Member</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Member\TsubokiScene.h">
+      <Filter>application\scene\Member</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Member\MiyamotoScene.h">
+      <Filter>application\scene\Member</Filter>
     </ClInclude>
     <ClInclude Include="application\settings\Settings.h">
       <Filter>application\settings</Filter>

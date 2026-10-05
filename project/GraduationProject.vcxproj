@@ -125,6 +125,11 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="application\scene\Sample\SampleScene.cpp" />
     <ClCompile Include="application\scene\Title\TitleScene.cpp" />
     <ClCompile Include="application\scene\Option\OptionScene.cpp" />
+    <ClCompile Include="application\scene\Member\OnoderaScene.cpp" />
+    <ClCompile Include="application\scene\Member\NagaiScene.cpp" />
+    <ClCompile Include="application\scene\Member\SatouScene.cpp" />
+    <ClCompile Include="application\scene\Member\TsubokiScene.cpp" />
+    <ClCompile Include="application\scene\Member\MiyamotoScene.cpp" />
     <ClCompile Include="application\settings\Settings.cpp" />
     <ClCompile Include="application\audio\AudioManager.cpp" />
   </ItemGroup>
@@ -136,6 +141,11 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="application\scene\Sample\SampleScene.h" />
     <ClInclude Include="application\scene\Title\TitleScene.h" />
     <ClInclude Include="application\scene\Option\OptionScene.h" />
+    <ClInclude Include="application\scene\Member\OnoderaScene.h" />
+    <ClInclude Include="application\scene\Member\NagaiScene.h" />
+    <ClInclude Include="application\scene\Member\SatouScene.h" />
+    <ClInclude Include="application\scene\Member\TsubokiScene.h" />
+    <ClInclude Include="application\scene\Member\MiyamotoScene.h" />
     <ClInclude Include="application\settings\Settings.h" />
     <ClInclude Include="application\audio\AudioManager.h" />
   </ItemGroup>
