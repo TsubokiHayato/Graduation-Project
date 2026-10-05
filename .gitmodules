@@ -1,0 +1,3 @@
+[submodule "project/EngineCore"]
+	path = project/EngineCore
+	url = https://github.com/TsubokiHayato/TuboEngine-Core.git

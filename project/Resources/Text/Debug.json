@@ -1,0 +1,32 @@
+{
+  "sprites": [],
+  "texts": [
+    {
+      "anchor": 0,
+      "color": [
+        0.8324487209320068,
+        0.03914588689804077,
+        1.0,
+        1.0
+      ],
+      "font": "Best10",
+      "fontSize": 32.0,
+      "horizontalAlign": 0,
+      "margin": [
+        20.0,
+        20.0
+      ],
+      "name": "Text0",
+      "position": [
+        100.0,
+        100.0
+      ],
+      "relativeAnchor": 0,
+      "relativeGap": 8.0,
+      "relativeTo": "",
+      "scale": 1.0,
+      "text": "茄子はおいしいよ",
+      "verticalAlign": 0
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "sprites": [],
+  "texts": [
+    {
+      "anchor": 2,
+      "color": [
+        1.0,
+        0.9,
+        0.3,
+        1.0
+      ],
+      "font": "Best10",
+      "fontSize": 96.0,
+      "horizontalAlign": 1,
+      "margin": [
+        0.0,
+        0.0
+      ],
+      "name": "clear_title",
+      "position": [
+        640.0,
+        260.0
+      ],
+      "relativeAnchor": 0,
+      "relativeGap": 8.0,
+      "relativeTo": "",
+      "scale": 1.0,
+      "text": "ゲームクリア！",
+      "verticalAlign": 1
+    },
+    {
+      "anchor": 2,
+      "color": [
+        0.9,
+        0.9,
+        0.95,
+        1.0
+      ],
+      "font": "YasashisaGothicBold-V2",
+      "fontSize": 30.0,
+      "horizontalAlign": 1,
+      "margin": [
+        0.0,
+        0.0
+      ],
+      "name": "clear_hint",
+      "position": [
+        640.0,
+        560.0
+      ],
+      "relativeAnchor": 0,
+      "relativeGap": 8.0,
+      "relativeTo": "",
+      "scale": 1.0,
+      "text": "Enter / A : タイトルへ",
+      "verticalAlign": 1
+    }
+  ]
+}

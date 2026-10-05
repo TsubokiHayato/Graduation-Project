@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="application">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="application\scene">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000002}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="application\scene\Sample">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000003}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="application\scene\Title">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000004}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="application\scene\Option">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000005}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="application\settings">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000006}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="application\audio">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000007}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="FadeScreen.cpp" />
+    <ClCompile Include="application\Order.cpp">
+      <Filter>application</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\SceneRegistration.cpp">
+      <Filter>application\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Sample\SampleScene.cpp">
+      <Filter>application\scene\Sample</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Title\TitleScene.cpp">
+      <Filter>application\scene\Title</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Option\OptionScene.cpp">
+      <Filter>application\scene\Option</Filter>
+    </ClCompile>
+    <ClCompile Include="application\settings\Settings.cpp">
+      <Filter>application\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="application\audio\AudioManager.cpp">
+      <Filter>application\audio</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="FadeScreen.h" />
+    <ClInclude Include="application\Order.h">
+      <Filter>application</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\GameScenes.h">
+      <Filter>application\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\SceneRegistration.h">
+      <Filter>application\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Sample\SampleScene.h">
+      <Filter>application\scene\Sample</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Title\TitleScene.h">
+      <Filter>application\scene\Title</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Option\OptionScene.h">
+      <Filter>application\scene\Option</Filter>
+    </ClInclude>
+    <ClInclude Include="application\settings\Settings.h">
+      <Filter>application\settings</Filter>
+    </ClInclude>
+    <ClInclude Include="application\audio\AudioManager.h">
+      <Filter>application\audio</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
