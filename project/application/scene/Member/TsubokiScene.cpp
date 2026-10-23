@@ -3,6 +3,7 @@
 #include "Matrix.h"
 #include "Object3dCommon.h"
 #include "TextManager.h"
+#include "LineManager.h"
 #include "GameTime.h"
 #include <algorithm>
 #include <cmath>
@@ -61,7 +62,16 @@ void TsubokiScene::Initialize() {
 	human_->AddAnimation("Walk", "human/walk.gltf");
 	human_->AddAnimation("SneakWalk", "human/sneakWalk.gltf");
 	human_->AddAnimation("Idle", CreateIdlePose());
-	human_->PlayAnimation("Idle", 0.0f);
+
+	// 状態遷移を登録する（どの状態からでも、条件に合う状態へ切り替える）
+	using Op = TuboEngine::AnimatorController::Op;
+	animController_.AddState("Idle", "Idle");
+	animController_.AddState("Walk", "Walk");
+	animController_.AddState("SneakWalk", "SneakWalk");
+	animController_.AddTransition("*", "Idle", {{"moving", Op::False}});
+	animController_.AddTransition("*", "SneakWalk", {{"moving", Op::True}, {"sneak", Op::True}});
+	animController_.AddTransition("*", "Walk", {{"moving", Op::True}, {"sneak", Op::False}});
+	animController_.SetDefaultState("Idle");
 }
 
 TuboEngine::Animation TsubokiScene::CreateIdlePose() const {
@@ -104,6 +114,11 @@ void TsubokiScene::Update() {
 	axis_->Update();
 	ground_->Update();
 	human_->Update(TuboEngine::Time::DeltaTime());
+
+	// ボーンのワールド座標の確認用（ImGui でオン）
+	if (showHandMarker_) {
+		LineManager::GetInstance()->DrawSphere(human_->GetJointWorldPosition("mixamorig:RightHand"), 0.08f, {1.0f, 0.3f, 0.3f, 1.0f}, 12);
+	}
 
 	TextManager::GetInstance()->UpdateAll();
 }
@@ -148,9 +163,11 @@ void TsubokiScene::UpdateCharacter() {
 		yaw_ += diff * (std::min)(turnSpeed_ * TuboEngine::Time::DeltaTime(), 1.0f);
 	}
 
-	// 状態に合わせてアニメーションを切り替える（同じ名前なら何もしない）
-	state_ = !isMoving ? "Idle" : (sneak ? "SneakWalk" : "Walk");
-	human_->PlayAnimation(state_, blendTime_);
+	// 状態の切り替えは AnimatorController に任せる（条件は Initialize で登録）
+	animController_.SetBool("moving", isMoving);
+	animController_.SetBool("sneak", sneak);
+	animController_.SetDefaultBlendTime(blendTime_);
+	animController_.Update(*human_);
 
 	human_->SetPosition(position_);
 	human_->SetRotation({0.0f, yaw_, 0.0f});
@@ -191,7 +208,8 @@ void TsubokiScene::ImGuiDraw() {
 	ImGui::Begin("Human");
 	ImGui::Separator();
 	ImGui::Text("Controller  (WASD: 移動 / Shift: しのび足)");
-	ImGui::Text("State: %s", state_);
+	ImGui::Text("State: %s", animController_.GetCurrentState().c_str());
+	ImGui::Checkbox("右手の位置を表示", &showHandMarker_);
 	ImGui::DragFloat("Model Scale", &modelScale_, 0.01f, 0.1f, 10.0f);
 	ImGui::DragFloat("Walk Speed", &walkSpeed_, 0.05f, 0.0f, 10.0f);
 	ImGui::DragFloat("Sneak Speed", &sneakSpeed_, 0.05f, 0.0f, 10.0f);
@@ -200,6 +218,7 @@ void TsubokiScene::ImGuiDraw() {
 	ImGui::DragFloat3("Camera Offset", &cameraOffset_.x, 0.1f);
 	ImGui::DragFloat("Camera Pitch", &cameraPitch_, 0.01f);
 	ImGui::End();
+	animController_.DrawImGui("Human");
 #endif
 }
 

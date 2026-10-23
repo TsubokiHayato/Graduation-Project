@@ -23,11 +23,11 @@
 | 2 | **イージング関数をまとめる**（`Easing.h` ＋ Tween） | ✅（`Easing.h` / `Tween.h`） | 1 日 | 0 |
 | 3 | **JsonManager を作る**（読み書き・Vector 変換・エラーログ） | ✅（`JsonManager.h`） | 1.5 日 | — |
 | 4 | **ParticleManager の JSON 処理を分離**（3 の適用第 1 弾） | ✅（Settings / TextManager も移行済み） | 1 日 | 3 |
-| 5 | **アニメーション** | 🟡（スキニング・クロスフェードまで実装済み） | 2〜3 日（残り） | 0, 2 |
+| 5 | **アニメーション** | ✅（イベント・ステートマシン・キャッシュ・ボーン取得を追加。複数メッシュは未対応） | 2〜3 日（残り） | 0, 2 |
 | 6 | **ImGui の UI を Unity 風にする**（Debug のみ） | 🟡（レイアウト・Hierarchy・Project・Console 実装済み） | 2〜3 日（残り） | 3 |
 | B | **バグ修正**（[3 章](#3-バグになりそうな箇所) の「高」） | ✅（#1〜#4 修正済み） | 1 日 | — |
 
-> 1・2 週目の分（0〜4・B）は EngineCore ブランチ `Ver7.0_Feature_EngineImprove` / 親リポジトリ ブランチ `Ver1.1_Feature_EngineImprove` で実装済み。使い方は [2-10](#2-10-ver70-で追加したもの)。
+> 1〜3 週目の分（0〜5・B）は EngineCore ブランチ `Ver7.0_Feature_EngineImprove` / 親リポジトリ ブランチ `Ver1.1_Feature_EngineImprove` で実装済み。使い方は [2-10](#2-10-ver70-で追加したもの)。
 
 ### 1-2. 日程（目安）
 
@@ -485,6 +485,62 @@ JsonManager::SaveObject("Resources/Player.json", param);
 - `TextManager` … `TextManager.cpp` 先頭の `TUBO_TEXT_DEFINITION_FIELDS` / `TUBO_SPRITE_DEFINITION_FIELDS`。キー名は今までと同じ。
 - `Settings` … `Settings.h` 末尾の `SETTINGS_FIELDS`。項目追加は「フィールド・一覧・OptionScene」の 3 か所。
 
+#### アニメーション（Ver7.0 で追加）
+
+**イベント**（決まった時間に処理を呼ぶ）:
+
+```cpp
+human_->AddEvent("Walk", 0.30f, [this] { PlaySe("step.mp3"); });          // 0.3秒を通過するたびに呼ばれる（ループ毎周）
+human_->AddEvent("Attack", 0.15f, nullptr, "hit");                         // 名前だけ付けて…
+human_->SetEventListener([this](const std::string& anim, const std::string& ev) {
+	if (ev == "hit") { CheckAttackHit(); }                                  // …ここでまとめて受け取る
+});
+human_->SetOnFinished([this](const std::string& anim) { /* ループしない再生が終わった */ });
+```
+
+- 逆再生でも通過すれば呼ばれる。0 秒のイベントは再生開始時と毎周の先頭で呼ばれる。
+- クロスフェード中の「前のアニメーション」のイベントは呼ばれない。
+
+**AnimatorController**（Unity の Animator Controller のような状態遷移）— `engine/graphic/Animation/AnimatorController.h`:
+
+```cpp
+using Op = TuboEngine::AnimatorController::Op;
+controller_.AddState("Idle", "Idle");                 // 状態名, Animator に登録したアニメーション名
+controller_.AddState("Walk", "Walk");
+controller_.AddState("Attack", "Attack", /*loop*/ false);
+controller_.AddTransition("Idle", "Walk", {{"speed", Op::Greater, 0.1f}});
+controller_.AddTransition("Walk", "Idle", {{"speed", Op::LessEqual, 0.1f}});
+controller_.AddTransition("*", "Attack", {{"attack", Op::Trigger}});      // "*" = どの状態からでも
+controller_.AddTransition("Attack", "Idle", {}, -1.0f, /*exitTime*/ 1.0f); // 最後まで再生したら戻る
+controller_.AddStateEvent("Walk", 0.3f, "footstep");                       // SetEventListener に届く
+
+// Update（animator->Update より前）
+controller_.SetFloat("speed", speed);
+if (attackPressed) { controller_.SetTrigger("attack"); }
+controller_.Update(*human_);
+human_->Update();
+// ImGui
+controller_.DrawImGui("Human"); // 今の状態・パラメータ（その場で変更可）・遷移一覧。状態ボタンで強制切り替え
+```
+
+- 比較: `Greater / GreaterEqual / Less / LessEqual / Equal / NotEqual / True / False / Trigger`。
+- 同じ状態からの遷移は追加順に調べ、最初に成立したものを使う。`"*"` の遷移が先。
+- JSON でも定義できる: `controller_.LoadFromJson("Resources/Animations/human.json")`（形式は `AnimatorController.cpp` 冒頭）。`SaveToJson` で今の定義を書き出せる。
+- 使用例: `TsubokiScene`（Idle / Walk / SneakWalk を `moving` と `sneak` で切り替え）。
+
+**ボーンの位置**（武器を持たせる・エフェクトを出す）:
+
+```cpp
+if (human_->HasJoint("mixamorig:RightHand")) {
+	sword_->SetLocalMatrix(human_->GetJointWorldMatrix("mixamorig:RightHand")); // ※ sword_ 自身の SRT は単位にしておく
+	Vector3 hand = human_->GetJointWorldPosition("mixamorig:RightHand");     // 座標だけ欲しい時
+}
+```
+
+- `Update()` の後に呼ぶ。TsubokiScene の ImGui「右手の位置を表示」で確認できる。
+
+**その他**: 同じ glTF の読み込みは2回目からキャッシュ（`ClearAnimationCache()` で消せる）。存在しないファイルは落ちずに Console にログ。
+
 ---
 
 ## 3. バグになりそうな箇所
@@ -500,8 +556,8 @@ JsonManager::SaveObject("Resources/Player.json", param);
 | 5 | 中 ✅修正済 | [Framework.cpp:79](../project/EngineCore/engine/Framework/Framework.cpp) / [WinApp.cpp:96](../project/EngineCore/engine/base/Common/WinApp.cpp) | マウス固定が常時 ON。Debug エディタ表示中もウィンドウ全体に閉じ込める | 2 枚目のモニタに移れない、ブレークポイントで止めたとき操作しにくい。→ 1-3 の 1 |
 | 6 | 中 🟡一部修正 | 各所の `1.0f / 60.0f` | deltaTime が固定値 | 処理落ちするとゲーム全体がスローになる。高リフレッシュレート環境で速度が変わる可能性。→ 1-3 の 0 |
 | 7 | 中 ✅修正済 | [WinApp.cpp](../project/EngineCore/engine/base/Common/WinApp.cpp) `ProcessMessage` | 1 フレームにメッセージを **1 個しか処理しない**（`if (PeekMessage…)`） | メッセージが溜まるとウィンドウのドラッグ・リサイズや入力が重くなる。→ `while` にする（`WM_QUIT` 判定は中で） |
-| 8 | 中 | [Animation.cpp](../project/EngineCore/engine/graphic/Animation/Animation.cpp) `LoadAnimation` / `LoadAnimations` | 読み込み失敗を `assert(scene)` だけで確認 | Release でパスを間違えると **null 参照で落ちる**。→ Logger に出して空のアニメを返す |
-| 9 | 中 | `Animator::Initialize` ＋ `AddAnimation(名前, ファイル)` | 同じ glTF を Assimp で何度もパース | モデルが増えるとシーン読み込みが遅くなる。→ キャッシュ（1-3 の 5） |
+| 8 | 中 ✅修正済 | [Animation.cpp](../project/EngineCore/engine/graphic/Animation/Animation.cpp) `LoadAnimation` / `LoadAnimations` | 読み込み失敗を `assert(scene)` だけで確認 | Release でパスを間違えると **null 参照で落ちる**。→ Logger に出して空のアニメを返す |
+| 9 | 中 ✅修正済 | `Animator::Initialize` ＋ `AddAnimation(名前, ファイル)` | 同じ glTF を Assimp で何度もパース | モデルが増えるとシーン読み込みが遅くなる。→ キャッシュ（1-3 の 5） |
 | 10 | 中 🟡一部修正 | `"Resources/..."` の相対パス全般（Settings / Particle / Text） | 作業ディレクトリ基準 | exe を別の場所から起動すると、読み込みも保存も**黙って失敗**（設定が保存されない）。→ JsonManager で exe の場所基準に |
 | 11 | 低 ✅修正済 | [Framework.h](../project/EngineCore/engine/Framework/Framework.h) | `ImGuiManager.h` の include が `#ifdef _DEBUG` なのに、使う側は `#ifdef USE_IMGUI` | Release で USE_IMGUI を有効にする（またはその逆の）構成を作るとコンパイルエラー。→ 条件をそろえる |
 | 12 | 低 | `ImGuiManager::Begin` のショートカット | Ctrl+Shift+P（一時停止切替）と Ctrl+Alt+P（コマ送り）は Ctrl+Shift+Alt+P で両方反応 | 一時停止が解除されつつコマ送りになる等。→ 修飾キーを厳密に判定 |
@@ -526,6 +582,9 @@ JsonManager::SaveObject("Resources/Player.json", param);
 - **#10 相対パス**: `JsonManager` は作業フォルダに無ければ exe の隣も探す。失敗時は Console に理由と作業フォルダを出す（黙って失敗しない）。JSON 以外（テクスチャ・モデル等）は未対応。
 
 - **#18 レイアウト再読み込みで落ちる**: TextManager に `GetLayoutRevision()`（作り直した回数）と `RequestLoadTextLayout()`（次の UpdateAll で読み込む）を追加。テキストのポインタを持つシーンは、値が変わったら取り直す（TitleScene の `RefreshTextRefs` が例）。
+
+- **#8 アニメーション読み込み失敗**: `assert` をやめ、Console にログを出して空のアニメーション（duration 0）を返す。
+- **#9 同じ glTF を何度もパース**: 読み込み結果をファイルごとにキャッシュ（初回 32ms → 2回目 0.15ms。human/sneakWalk.gltf で計測）。
 
 ### 先に直すべきもの（1 週目の B）
 

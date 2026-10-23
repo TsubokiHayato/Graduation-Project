@@ -3,6 +3,7 @@
 #include "Camera.h"
 #include "Object3d.h"
 #include "Animator.h"
+#include "AnimatorController.h"
 #include <memory>
 
 class TsubokiScene : public IScene {
@@ -48,7 +49,9 @@ private:
 	float sneakSpeed_ = 2.4f;
 	float turnSpeed_ = 10.0f;     // 旋回の追従の速さ
 	float blendTime_ = 0.2f;      // アニメーション切り替えのクロスフェード時間（秒）
-	const char* state_ = "Idle";  // 現在の状態（表示用）
+	// アニメーションの状態遷移（Idle / Walk / SneakWalk）。条件は Initialize で登録
+	TuboEngine::AnimatorController animController_;
+	bool showHandMarker_ = false; // 右手の位置に球を表示する（ボーン位置取得の確認用）
 
 	// カメラ（キャラクターからの相対位置）
 	TuboEngine::Math::Vector3 cameraOffset_ = {0.0f, 4.0f, -9.0f};
