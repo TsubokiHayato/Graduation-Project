@@ -4,6 +4,7 @@
 #include "Object3dCommon.h"
 #include "TextManager.h"
 #include "LineManager.h"
+#include "EditorObjects.h"
 #include "GameTime.h"
 #include <algorithm>
 #include <cmath>
@@ -202,6 +203,11 @@ void TsubokiScene::ParticleDraw() {}
 // =============================================================================
 void TsubokiScene::ImGuiDraw() {
 #ifdef USE_IMGUI
+	// Hierarchy / Inspector / Timeline に出す（クリックで選択 → Gizmo で移動・キーフレーム作成）
+	TuboEngine::Editor::Inspect("human", human_.get());
+	TuboEngine::Editor::Inspect("axis", axis_.get());
+	TuboEngine::Editor::Inspect("ground", ground_.get());
+
 	axis_->DrawImGui("3D Object : axis");
 	human_->DrawImGui("Human");
 

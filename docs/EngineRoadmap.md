@@ -24,10 +24,11 @@
 | 3 | **JsonManager を作る**（読み書き・Vector 変換・エラーログ） | ✅（`JsonManager.h`） | 1.5 日 | — |
 | 4 | **ParticleManager の JSON 処理を分離**（3 の適用第 1 弾） | ✅（Settings / TextManager も移行済み） | 1 日 | 3 |
 | 5 | **アニメーション** | ✅（イベント・ステートマシン・キャッシュ・ボーン取得を追加。複数メッシュは未対応） | 2〜3 日（残り） | 0, 2 |
-| 6 | **ImGui の UI を Unity 風にする**（Debug のみ） | 🟡（レイアウト・Hierarchy・Project・Console 実装済み） | 2〜3 日（残り） | 3 |
+| 6 | **ImGui の UI を Unity 風にする**（Debug のみ） | ✅（Hierarchy のオブジェクト一覧・Inspector 編集・移動 Gizmo を追加。回転/拡縮 Gizmo は未対応） | 2〜3 日（残り） | 3 |
 | B | **バグ修正**（[3 章](#3-バグになりそうな箇所) の「高」） | ✅（#1〜#4 修正済み） | 1 日 | — |
+| 7 | **キーフレームアニメーション**（Blender のタイムライン / ドープシート風）※追加 | ✅（`KeyframeClip.h` ＋ Timeline ウィンドウ） | — | 2, 3, 6 |
 
-> 1〜3 週目の分（0〜5・B）は EngineCore ブランチ `Ver7.0_Feature_EngineImprove` / 親リポジトリ ブランチ `Ver1.1_Feature_EngineImprove` で実装済み。使い方は [2-10](#2-10-ver70-で追加したもの)。
+> 1〜4 週目の分と追加分（0〜7・B）は EngineCore ブランチ `Ver7.0_Feature_EngineImprove` / 親リポジトリ ブランチ `Ver1.1_Feature_EngineImprove` で実装済み。使い方は [2-10](#2-10-ver70-で追加したもの)。
 
 ### 1-2. 日程（目安）
 
@@ -540,6 +541,67 @@ if (human_->HasJoint("mixamorig:RightHand")) {
 - `Update()` の後に呼ぶ。TsubokiScene の ImGui「右手の位置を表示」で確認できる。
 
 **その他**: 同じ glTF の読み込みは2回目からキャッシュ（`ClearAnimationCache()` で消せる）。存在しないファイルは落ちずに Console にログ。
+
+#### エディタのオブジェクト（Hierarchy / Inspector / Gizmo）— `engine/imgui/EditorObjects.h`
+
+シーンの `ImGuiDraw()` で、見せたいオブジェクトを**毎フレーム**登録する:
+
+```cpp
+#include "EditorObjects.h"
+void MyScene::ImGuiDraw() {
+#ifdef USE_IMGUI
+	TuboEngine::Editor::Inspect("player", player_.get());   // Object3d / Animator / Sprite / TextObject
+	TuboEngine::Editor::Inspect("enemy", enemy_.get(), [this] {
+		ImGui::DragFloat("HP", &enemyHp_);                  // Inspector に独自の項目を足す
+	});
+	TuboEngine::Editor::InspectCustom("GameRule", [this] {   // 位置を持たない物（設定値など）
+		ImGui::DragInt("制限時間", &timeLimit_);
+	});
+#endif
+}
+```
+
+- Hierarchy の一番上に `[3D] player` のように並ぶ → クリックで Inspector に位置・回転（度）・拡縮・色が出て、その場で編集できる。
+- 3D オブジェクトを選ぶと Game 画面に **XYZ の矢印（Gizmo）** が出て、ドラッグでその軸に沿って移動できる。
+- 毎フレーム登録し直すので、シーンが切り替わって消えたオブジェクトを触って落ちることはない（選択は名前で覚えている）。
+- 同じ名前を2回登録すると後の方に ` (2)` が付く。Release では何もしない。
+- 使用例: `TsubokiScene`（human / axis / ground）。
+
+> 注意: Inspector や Gizmo で動かしても、シーンが毎フレーム位置を上書きしている物（TsubokiScene の human など）はすぐ戻る。
+
+#### キーフレームアニメーション（Blender のタイムライン風）— `KeyframeClip.h` / Timeline ウィンドウ
+
+**作る（Debug の Timeline ウィンドウ。下段の Console の隣）**:
+1. Hierarchy でオブジェクトを選ぶ
+2. 目盛りをクリックして時間を合わせ、Inspector / Gizmo で動かして **「キーを打つ (I)」**（I キーは Timeline の上で）
+3. 時間を変えて 2 を繰り返す → 「再生」で確認
+4. ◆ をドラッグで時間変更（1/60 秒に吸着。Shift で吸着なし）、右クリックで削除 / 補間の変更、Delete キーでも削除
+5. 「Save」で `Resources/Animations/<名前>.json` に保存
+
+- 補間はキーごとに `Easing.h` の 31 種類から選べる（「そのキー → 次のキー」の動き方。選択中のキーのカーブが表示される）。
+- 打つ対象は 位置 / 回転 / 拡縮 / 色 のチェックで選ぶ。
+
+**ゲームで再生する**:
+
+```cpp
+#include "KeyframeClip.h"
+TuboEngine::KeyframeClip clip_;
+TuboEngine::KeyframePlayer player_;
+
+// Initialize
+clip_.LoadFromJson("Resources/Animations/door.json");
+player_.SetClip(&clip_);
+player_.Play();
+
+// Update
+player_.Update(TuboEngine::Time::DeltaTime());
+player_.Apply(door_.get());   // Object3d / Animator / Sprite / TextObject
+if (player_.IsFinished()) { ... }
+```
+
+- `Stop()`（先頭に戻す）/ `Pause()` / `SetTime()` / `SetSpeed()`。値だけ欲しい時は `player_.Evaluate("position", v)`。
+- コードでキーを打つこともできる: `clip_.SetKey("position", 1.0f, Vector3{0, 3, 0}, Easing::Type::OutBack);`
+- 2D: Sprite は position の x,y／rotation の z／scale の x,y をサイズとして、TextObject は scale の x を拡大率として使う。
 
 ---
 
