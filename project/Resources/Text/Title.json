@@ -25,7 +25,7 @@
       "relativeGap": 8.0,
       "relativeTo": "",
       "scale": 1.0,
-      "text": "ハメコミキューブ",
+      "text": "リペアームズ",
       "verticalAlign": 0
     },
     {
@@ -52,7 +52,7 @@
       "relativeGap": 8.0,
       "relativeTo": "",
       "scale": 1.0,
-      "text": "～ まわして そろえる 立体パズル ～",
+      "text": "～ 壊して、直して、つよくなる ～",
       "verticalAlign": 0
     },
     {
@@ -214,7 +214,7 @@
       "relativeGap": 8.0,
       "relativeTo": "",
       "scale": 1.0,
-      "text": "Ver 2.0",
+      "text": "Ver 0.0",
       "verticalAlign": 2
     }
   ]
