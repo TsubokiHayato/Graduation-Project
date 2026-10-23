@@ -385,8 +385,8 @@ TuboEngine::Time::SetTimeScale(0.3f);                // スロー演出（1.0 �
 
 | モード | 動作 |
 |---|---|
-| `Free` | 固定しない |
-| `Confined`（既定） | ウィンドウ内に閉じ込める。Debug で Game ウィンドウ表示中は **Game の画像の範囲** に閉じ込める |
+| `Free`（既定） | 固定しない |
+| `Confined` | ウィンドウ内に閉じ込める。Debug で Game ウィンドウ表示中は **Game の画像の範囲** に閉じ込める |
 | `Locked` | 中央に固定してカーソルを隠す（視点操作向け。移動量は `Input::GetMouseMove()`） |
 
 ```cpp
@@ -400,7 +400,8 @@ Debug ビルドでの操作（Unity の Play モードと同じ）:
 - 起動直後・Game 表示に切り替えた直後・別ウィンドウに切り替えた後は **固定されていない**。Game 画面を **クリックすると固定**。
 - **Esc で一時解除**（ゲーム側にも Esc は届く）。
 - メニュー **Layout → マウスカーソル** でモードを切り替え可能。Inspector に今の状態が出る。
-- Release ビルドは以前と同じく、ウィンドウが前面にある間は固定（Esc での解除は無し）。
+- **既定は `Free`（固定しない）**。固定したいシーンの `Initialize` で `SetCursorMode` を呼ぶ（シーンを抜ける時に `Free` に戻すこと）。
+- Release ビルドでは Esc での一時解除は無し（`Confined` / `Locked` にしたら、ウィンドウが前面にある間は固定）。
 
 #### イージング — `engine/math/Easing.h`
 
