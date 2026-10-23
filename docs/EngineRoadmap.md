@@ -21,13 +21,13 @@
 | 0 | **Time（deltaTime）クラス** を作る ※下の項目の土台 | ✅（`GameTime.h`） | 0.5 日 | — |
 | 1 | **マウスのウィンドウ固定を切り替え可能にする** | ✅（`WinApp::SetCursorMode`） | 0.5〜1 日 | — |
 | 2 | **イージング関数をまとめる**（`Easing.h` ＋ Tween） | ✅（`Easing.h` / `Tween.h`） | 1 日 | 0 |
-| 3 | **JsonManager を作る**（読み書き・Vector 変換・エラーログ） | ⬜（各クラスがバラバラに nlohmann を直接使用） | 1.5 日 | — |
-| 4 | **ParticleManager の JSON 処理を分離**（3 の適用第 1 弾） | ⬜ | 1 日 | 3 |
+| 3 | **JsonManager を作る**（読み書き・Vector 変換・エラーログ） | ✅（`JsonManager.h`） | 1.5 日 | — |
+| 4 | **ParticleManager の JSON 処理を分離**（3 の適用第 1 弾） | ✅（Settings / TextManager も移行済み） | 1 日 | 3 |
 | 5 | **アニメーション** | 🟡（スキニング・クロスフェードまで実装済み） | 2〜3 日（残り） | 0, 2 |
 | 6 | **ImGui の UI を Unity 風にする**（Debug のみ） | 🟡（レイアウト・Hierarchy・Project・Console 実装済み） | 2〜3 日（残り） | 3 |
-| B | **バグ修正**（[3 章](#3-バグになりそうな箇所) の「高」） | 🟡（#2〜#4 は修正済み。#1 は 4 で対応） | 1 日 | — |
+| B | **バグ修正**（[3 章](#3-バグになりそうな箇所) の「高」） | ✅（#1〜#4 修正済み） | 1 日 | — |
 
-> 1 週目の分（0・1・2・B）は EngineCore ブランチ `Ver7.0_Feature_EngineImprove` / 親リポジトリ ブランチ `Ver1.1_Feature_EngineImprove` で実装済み。使い方は [2-10](#2-10-ver70-で追加したもの)。
+> 1・2 週目の分（0〜4・B）は EngineCore ブランチ `Ver7.0_Feature_EngineImprove` / 親リポジトリ ブランチ `Ver1.1_Feature_EngineImprove` で実装済み。使い方は [2-10](#2-10-ver70-で追加したもの)。
 
 ### 1-2. 日程（目安）
 
@@ -162,6 +162,8 @@ inline void from_json(const nlohmann::json& j, Vector3& v) {
 ```
 
 構造体は `NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT` で **項目を 1 回書くだけ** にする:
+
+> **実装時の変更**: 同梱の nlohmann が 3.7 でこのマクロ（3.9 以降）が無かったため、同じ働きをする `TUBO_JSON_DEFINE` を自作した（[2-10](#2-10-ver70-で追加したもの)）。
 
 ```cpp
 // ParticlePresetJson.h（Particle の JSON 定義はここだけ）
@@ -436,6 +438,52 @@ if (slide.IsFinished()) { /* 終わった */ }
 
 その他: `Restart()` / `Complete()`（終点へ飛ばす）/ `Pause()` / `Resume()` / `GetProgress()`。
 
+#### JsonManager — `engine/base/Utilities/JsonManager.h`
+
+```cpp
+#include "JsonManager.h"
+using TuboEngine::JsonManager;
+
+// 読む（失敗したら false。理由は Console に赤で出る）
+JsonManager::Json j;
+if (JsonManager::Load("Resources/Player.json", j)) {
+	JsonManager::Read(j, "speed", speed_);       // キーが無い・型が違う時は speed_ はそのまま
+	JsonManager::Read(j, "position", position_); // Vector2/3/4 は [x, y, z] の配列
+}
+
+// 書く（フォルダが無ければ作る。一時ファイル→置き換えなので途中で落ちても壊れない）
+JsonManager::Json out;
+out["speed"] = speed_;
+out["position"] = position_;
+JsonManager::Save("Resources/Player.json", out);
+```
+
+**構造体を丸ごと保存する**（保存と読み込みの項目がずれない書き方）:
+
+```cpp
+struct PlayerParam {
+	float speed = 5.0f;
+	int hp = 100;
+	Vector3 spawn{0, 0, 0};
+};
+// 構造体と同じ名前空間に書く。X("JSONのキー", メンバ名) を並べるだけ
+#define PLAYER_PARAM_FIELDS(X) X("speed", speed) X("hp", hp) X("spawn", spawn)
+TUBO_JSON_DEFINE(PlayerParam, PLAYER_PARAM_FIELDS)
+
+PlayerParam param;
+JsonManager::LoadObject("Resources/Player.json", param); // 無いキーは初期値のまま
+JsonManager::SaveObject("Resources/Player.json", param);
+```
+
+- `Load(path, j, false)` … ファイルが無い時はログを出さない（初回起動で無いのが普通の設定ファイル用）。
+- 空のファイルは「データ無し」として false（エラー表示はしない）。
+- enum は数値で保存される。
+
+**移行済み**:
+- `ParticleManager` … 対応表は [ParticlePresetJson.h](../project/EngineCore/engine/graphic/Particle/ParticlePresetJson.h)。**項目を増やしたらここに 1 行足すだけ**。ファイル形式は今までと同じ（古いファイルもそのまま読める）。
+- `TextManager` … `TextManager.cpp` 先頭の `TUBO_TEXT_DEFINITION_FIELDS` / `TUBO_SPRITE_DEFINITION_FIELDS`。キー名は今までと同じ。
+- `Settings` … `Settings.h` 末尾の `SETTINGS_FIELDS`。項目追加は「フィールド・一覧・OptionScene」の 3 か所。
+
 ---
 
 ## 3. バグになりそうな箇所
@@ -444,7 +492,7 @@ if (slide.IsFinished()) { /* 終わった */ }
 
 | # | 重要度 | 場所 | 内容 | 起きること・対策 |
 |---|---|---|---|---|
-| 1 | **高** | [ParticleManager.cpp](../project/EngineCore/engine/graphic/Particle/ParticleManager.cpp) の `BuildSnapshotJson` / `SaveSelected` / `LoadAll` / `LoadMerge` / `ApplySnapshot` | 同じ JSON 変換が 4〜5 か所に手書きされていて**項目がそろっていない**。<br>・全部: `scaleMin/Max`・`colMin/Max`・`rotSpeedRangeZ`・`initialRotRangeZ`・`blendModeOverride` を保存しない<br>・`SaveSelected`: `center` を保存しない<br>・`LoadMerge`: `colorStart/End`・`drag`・`center`・`simulateInWorldSpace` を読まない | ImGui で調整して保存 → 再起動や Undo で**一部の値が既定値に戻る**。→ 1-3 の 4（JSON 定義を 1 か所に）で直す |
+| 1 | **高** ✅修正済 | [ParticleManager.cpp](../project/EngineCore/engine/graphic/Particle/ParticleManager.cpp) の `BuildSnapshotJson` / `SaveSelected` / `LoadAll` / `LoadMerge` / `ApplySnapshot` | 同じ JSON 変換が 4〜5 か所に手書きされていて**項目がそろっていない**。<br>・全部: `scaleMin/Max`・`colMin/Max`・`rotSpeedRangeZ`・`initialRotRangeZ`・`blendModeOverride` を保存しない<br>・`SaveSelected`: `center` を保存しない<br>・`LoadMerge`: `colorStart/End`・`drag`・`center`・`simulateInWorldSpace` を読まない | ImGui で調整して保存 → 再起動や Undo で**一部の値が既定値に戻る**。→ 1-3 の 4（JSON 定義を 1 か所に）で直す |
 | 2 | **高** ✅修正済 | [Input.cpp](../project/EngineCore/engine/input/Input.cpp) `Update` / `GetJoystickState(…, XINPUT_STATE&)` | ・XInput の更新で `xinputIndex_` ではなく**配列番号 `i`** を渡している<br>・XInput パッドは DirectInput でも列挙されるので**同じパッドが 2 回登録**される<br>・`GetJoystickState(0, XINPUT_STATE&)` は種類を確認せず共用体を返す | パッドを挿すと 0 番が DirectInput 側になり、**XInput として読むと値がでたらめ**（キャラが勝手に動く等）。→ 種類チェックを入れる・XInput 対応パッドは DirectInput 側から除外する |
 | 3 | **高** ✅修正済 | [SceneManager.cpp](../project/EngineCore/engine/scene/SceneManager.cpp) `Update` 先頭 | 未登録の番号に遷移すると `currentScene` が null になり、`Update` が先頭で return するので**以後 `ChangeScene` が処理されない**（Release は assert が消えるので気付きにくい） | 黒画面のまま戻れない。→ null チェックを遷移処理の後ろに移す／生成失敗時は元のシーン番号に戻す |
 | 4 | **高** ✅修正済 | [Framework.cpp](../project/EngineCore/engine/Framework/Framework.cpp) `Finalize` | `SceneManager::Finalize`（＝シーンの `Finalize`）が、`Input`・`ParticleManager`・`TextureManager`・`ModelManager`・`SrvManager` の終了**より後**に呼ばれている | シーンの Finalize でこれらに触ると、解放済みを使う or `GetInstance()` で**新しく作り直されてリーク**。→ `SceneManager::Finalize` を一番最初に移す |
@@ -453,7 +501,7 @@ if (slide.IsFinished()) { /* 終わった */ }
 | 7 | 中 ✅修正済 | [WinApp.cpp](../project/EngineCore/engine/base/Common/WinApp.cpp) `ProcessMessage` | 1 フレームにメッセージを **1 個しか処理しない**（`if (PeekMessage…)`） | メッセージが溜まるとウィンドウのドラッグ・リサイズや入力が重くなる。→ `while` にする（`WM_QUIT` 判定は中で） |
 | 8 | 中 | [Animation.cpp](../project/EngineCore/engine/graphic/Animation/Animation.cpp) `LoadAnimation` / `LoadAnimations` | 読み込み失敗を `assert(scene)` だけで確認 | Release でパスを間違えると **null 参照で落ちる**。→ Logger に出して空のアニメを返す |
 | 9 | 中 | `Animator::Initialize` ＋ `AddAnimation(名前, ファイル)` | 同じ glTF を Assimp で何度もパース | モデルが増えるとシーン読み込みが遅くなる。→ キャッシュ（1-3 の 5） |
-| 10 | 中 | `"Resources/..."` の相対パス全般（Settings / Particle / Text） | 作業ディレクトリ基準 | exe を別の場所から起動すると、読み込みも保存も**黙って失敗**（設定が保存されない）。→ JsonManager で exe の場所基準に |
+| 10 | 中 🟡一部修正 | `"Resources/..."` の相対パス全般（Settings / Particle / Text） | 作業ディレクトリ基準 | exe を別の場所から起動すると、読み込みも保存も**黙って失敗**（設定が保存されない）。→ JsonManager で exe の場所基準に |
 | 11 | 低 ✅修正済 | [Framework.h](../project/EngineCore/engine/Framework/Framework.h) | `ImGuiManager.h` の include が `#ifdef _DEBUG` なのに、使う側は `#ifdef USE_IMGUI` | Release で USE_IMGUI を有効にする（またはその逆の）構成を作るとコンパイルエラー。→ 条件をそろえる |
 | 12 | 低 | `ImGuiManager::Begin` のショートカット | Ctrl+Shift+P（一時停止切替）と Ctrl+Alt+P（コマ送り）は Ctrl+Shift+Alt+P で両方反応 | 一時停止が解除されつつコマ送りになる等。→ 修飾キーを厳密に判定 |
 | 13 | 低 | `Animator::DrawImGui` | `ImGui::Begin` を直接使用（`BeginPanel` ではない） | Window メニューから非表示にできない |
@@ -471,6 +519,9 @@ if (slide.IsFinished()) { /* 終わった */ }
 - **#6 deltaTime**: `Time` を追加し、TitleScene / TsubokiScene / SampleScene / Animator の既定値を置き換え。エンジン内部の `Particle.cpp` / `ParticleEmitter.cpp` / `VHSEffect.cpp` は未対応。
 - **#7 メッセージ処理**: `while (PeekMessage…)` で溜まった分を全て処理。
 - **#11 include**: `ImGuiManager.h` を常に include（中で `USE_IMGUI` を見ている）。
+
+- **#1 Particle**: 保存・読み込み・Undo の全てが [ParticlePresetJson.h](../project/EngineCore/engine/graphic/Particle/ParticlePresetJson.h) の対応表 1 つを使うようにした。抜けていた `scaleMin/Max`・`colMin/Max`・`rotSpeedRangeZ`・`initialRotRangeZ`・`blendModeOverride` も保存される。
+- **#10 相対パス**: `JsonManager` は作業フォルダに無ければ exe の隣も探す。失敗時は Console に理由と作業フォルダを出す（黙って失敗しない）。JSON 以外（テクスチャ・モデル等）は未対応。
 
 ### 先に直すべきもの（1 週目の B）
 
