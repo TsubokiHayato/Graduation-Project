@@ -7,6 +7,8 @@
 #include "audio/AudioManager.h" // BGM / SE
 #include "ParticleManager.h"    // タイトル背景のパーティクル
 #include "IParticleEmitter.h"   // ParticlePreset 構造体
+#include "Easing.h"             // イージング関数
+#include "GameTime.h"               // 経過時間（deltaTime）
 #include <Windows.h> // PostQuitMessage（終了）
 #include <cstdlib>   // rand
 #include <cmath>     // sin
@@ -32,14 +34,6 @@ constexpr float kMenuStagger = 0.12f; // 項目ごとの遅延（順番に出す
 constexpr float kMenuDur     = 0.4f;  // 各メニュー項目のフェード時間
 constexpr float kCursorStart = 0.9f;  // カーソル／ヒントが出始める時刻
 
-// 0〜1 にクランプ
-float Clamp01(float t) { return t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t); }
-// イーズアウト（最後にゆっくり止まる）
-float EaseOutCubic(float t) {
-	t = Clamp01(t);
-	float u = 1.0f - t;
-	return 1.0f - u * u * u;
-}
 } // namespace
 
 void TitleScene::Initialize() {
@@ -119,7 +113,7 @@ void TitleScene::Initialize() {
 }
 
 void TitleScene::Update() {
-	const float dt = 1.0f / 60.0f;
+	const float dt = TuboEngine::Time::DeltaTime();
 	animTime_ += dt;
 	introTimer_ += dt;
 
@@ -170,7 +164,7 @@ void TitleScene::UpdateMenuVisual(float dt) {
 
 	// --- タイトル文字（上から少し降りてフェードイン）---
 	if (title_) {
-		float e = EaseOutCubic((introTimer_ - kTitleStart) / kTitleDur);
+		float e = TuboEngine::Easing::OutCubic((introTimer_ - kTitleStart) / kTitleDur);
 		title_->SetColor({1.0f, 1.0f, 1.0f, e});
 		title_->SetPosition({titleHome_.x, titleHome_.y - (1.0f - e) * 40.0f});
 	}
@@ -180,7 +174,7 @@ void TitleScene::UpdateMenuVisual(float dt) {
 		if (!menuItems_[i])
 			continue;
 		float start = kMenuStartT + kMenuStagger * static_cast<float>(i);
-		float e = EaseOutCubic((introTimer_ - start) / kMenuDur);
+		float e = TuboEngine::Easing::OutCubic((introTimer_ - start) / kMenuDur);
 
 		// 選択中は黄色、その他は白。アルファは登場アニメの進み具合。
 		const Math::Vector4& base = (i == selected_) ? kColorSelected : kColorNormal;
@@ -208,14 +202,14 @@ void TitleScene::UpdateMenuVisual(float dt) {
 		cursorPos_.y += (target.y - cursorPos_.y) * 0.25f;
 		cursor_->SetPosition(cursorPos_);
 
-		float e = EaseOutCubic((introTimer_ - kCursorStart) / kMenuDur);
+		float e = TuboEngine::Easing::OutCubic((introTimer_ - kCursorStart) / kMenuDur);
 		float blink = 0.6f + 0.4f * std::sin(animTime_ * 5.0f); // ゆっくり明滅
 		cursor_->SetColor({kColorSelected.x, kColorSelected.y, kColorSelected.z, e * blink});
 	}
 
 	// --- 操作ヒント（カーソルと同じタイミングでフェードイン）---
 	if (hint_) {
-		float e = EaseOutCubic((introTimer_ - kCursorStart) / kMenuDur);
+		float e = TuboEngine::Easing::OutCubic((introTimer_ - kCursorStart) / kMenuDur);
 		const Math::Vector4& c = hint_->GetColor();
 		hint_->SetColor({c.x, c.y, c.z, e}); // JSON の灰色を保ちつつアルファだけ動かす
 	}

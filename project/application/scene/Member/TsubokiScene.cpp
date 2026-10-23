@@ -3,6 +3,7 @@
 #include "Matrix.h"
 #include "Object3dCommon.h"
 #include "TextManager.h"
+#include "GameTime.h"
 #include <algorithm>
 #include <cmath>
 #include <numbers>
@@ -13,7 +14,6 @@
 using namespace TuboEngine;
 
 namespace {
-constexpr float kDeltaTime = 1.0f / 60.0f;
 constexpr float kPi = std::numbers::pi_v<float>;
 
 // human モデル（Mixamo のボーン名）
@@ -103,7 +103,7 @@ void TsubokiScene::Update() {
 	camera_->Update();
 	axis_->Update();
 	ground_->Update();
-	human_->Update(kDeltaTime);
+	human_->Update(TuboEngine::Time::DeltaTime());
 
 	TextManager::GetInstance()->UpdateAll();
 }
@@ -139,13 +139,13 @@ void TsubokiScene::UpdateCharacter() {
 		move.x /= (std::max)(length, 1.0f);
 		move.z /= (std::max)(length, 1.0f);
 		float speed = sneak ? sneakSpeed_ : walkSpeed_;
-		position_.x += move.x * speed * kDeltaTime;
-		position_.z += move.z * speed * kDeltaTime;
+		position_.x += move.x * speed * TuboEngine::Time::DeltaTime();
+		position_.z += move.z * speed * TuboEngine::Time::DeltaTime();
 
 		// 進行方向へなめらかに向く（最短方向に回る）
 		float targetYaw = std::atan2(move.x, move.z);
 		float diff = std::remainder(targetYaw - yaw_, 2.0f * kPi);
-		yaw_ += diff * (std::min)(turnSpeed_ * kDeltaTime, 1.0f);
+		yaw_ += diff * (std::min)(turnSpeed_ * TuboEngine::Time::DeltaTime(), 1.0f);
 	}
 
 	// 状態に合わせてアニメーションを切り替える（同じ名前なら何もしない）

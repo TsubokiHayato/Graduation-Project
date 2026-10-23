@@ -1,6 +1,7 @@
 #include "SampleScene.h"
 #include "GameScenes.h"
 #include "SceneManager.h"     // シーン遷移（ChangeScene）
+#include "GameTime.h"             // 経過時間（deltaTime）
 
 #include "Input.h"            // キーボード / マウス / ゲームパッド入力（エンジンが毎フレーム自動 Update）
 #include "IParticleEmitter.h" // ParticlePreset 構造体
@@ -147,7 +148,7 @@ void SampleScene::Update() {
 
 	// (6) パーティクル更新。dt（経過時間）とカメラを渡す。
 	//     ※ Particle は Line/Input と違い、エンジンが自動更新しない＝シーンが駆動する。
-	ParticleManager::GetInstance()->Update(1.0f / 60.0f, camera_.get());
+	ParticleManager::GetInstance()->Update(TuboEngine::Time::DeltaTime(), camera_.get());
 
 	// (7) TextManager 更新。Particle と同様にシーンが駆動する。
 	TextManager::GetInstance()->UpdateAll();
