@@ -52,6 +52,7 @@ void OptionScene::Initialize() {
 	selected_ = 0;
 	RefreshValues();
 	ApplySelection();
+	textRevision_ = TextManager::GetInstance()->GetLayoutRevision();
 
 	// タイトルから引き継いだ BGM を維持（直接開いても鳴るように）。
 	AudioManager::GetInstance()->PlayBgm("title.wav");
@@ -184,6 +185,18 @@ void OptionScene::ApplySelection() {
 
 void OptionScene::Update() {
 	camera_->Update();
+
+	// ImGui の TextManager パネルでレイアウトを読み込み直した等で、テキストが消えていたら作り直す
+	// （古いポインタは破棄済みなので使わない）
+	if (TextManager::GetInstance()->GetLayoutRevision() != textRevision_) {
+		labelTexts_.clear();
+		valueTexts_.clear();
+		cursor_ = nullptr;
+		CreateTexts();
+		RefreshValues();
+		ApplySelection();
+		textRevision_ = TextManager::GetInstance()->GetLayoutRevision();
+	}
 
 	// フェードアウト中(遷移予約済み)は入力を止めて、真っ黒になったら切り替える。
 	if (pendingScene_ >= 0) {

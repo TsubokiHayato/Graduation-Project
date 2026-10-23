@@ -509,6 +509,7 @@ JsonManager::SaveObject("Resources/Player.json", param);
 | 15 | 低 | `WinApp::Finalize` | `CloseWindow`（最小化するだけ）を呼んでいて `DestroyWindow` していない。`timeBeginPeriod(1)` に対する `timeEndPeriod(1)` も無い | 終了時なので実害は小さい |
 | 16 | 低 | `ImGuiManager::Finalize` | `delete instance` が `#ifdef USE_IMGUI` の中 | ImGui 無しビルドでわずかにリーク |
 | 17 | 低 | `ParticleManager::GetInstance` | 関数内 static。最初の `GetInstance()` 時に JSON を読み、プログラム終了時にもデストラクタが走る | 初期化順序や終了順序が見えにくい。他のシングルトンと同じ明示的な Initialize/Finalize に寄せると安全 |
+| 18 | **高** ✅修正済 | `TextManager::LoadTextLayout` / TitleScene・OptionScene | レイアウトを読み込むとテキストが全部作り直されるのに、シーンは `GetTextByName` で取った古いポインタを使い続けていた | ImGui の TextManager パネルで Load すると**アクセス違反で落ちる**。→ `GetLayoutRevision()` が変わったらシーンが取り直す。Load ボタンは次の `UpdateAll` で読み込む |
 
 ### Ver7.0 での修正内容
 
@@ -522,6 +523,8 @@ JsonManager::SaveObject("Resources/Player.json", param);
 
 - **#1 Particle**: 保存・読み込み・Undo の全てが [ParticlePresetJson.h](../project/EngineCore/engine/graphic/Particle/ParticlePresetJson.h) の対応表 1 つを使うようにした。抜けていた `scaleMin/Max`・`colMin/Max`・`rotSpeedRangeZ`・`initialRotRangeZ`・`blendModeOverride` も保存される。
 - **#10 相対パス**: `JsonManager` は作業フォルダに無ければ exe の隣も探す。失敗時は Console に理由と作業フォルダを出す（黙って失敗しない）。JSON 以外（テクスチャ・モデル等）は未対応。
+
+- **#18 レイアウト再読み込みで落ちる**: TextManager に `GetLayoutRevision()`（作り直した回数）と `RequestLoadTextLayout()`（次の UpdateAll で読み込む）を追加。テキストのポインタを持つシーンは、値が変わったら取り直す（TitleScene の `RefreshTextRefs` が例）。
 
 ### 先に直すべきもの（1 週目の B）
 

@@ -55,17 +55,7 @@ void TitleScene::Initialize() {
 	tm->LoadTextLayout("Resources/Text/Title.json");
 
 	// 選択で色替え／移動する要素だけ、name で引いて生ポインタを保持しておく。
-	for (int i = 0; i < kMenuCount; ++i) {
-		menuItems_[i] = tm->GetTextByName(kMenuNames[i]);
-		// JSON 由来の位置を「最終位置」として覚える（登場アニメはここへ寄せる）。
-		if (menuItems_[i])
-			menuHome_[i] = menuItems_[i]->GetPosition();
-	}
-	cursor_ = tm->GetTextByName("cursor");
-	title_ = tm->GetTextByName("title");
-	hint_ = tm->GetTextByName("hint");
-	if (title_)
-		titleHome_ = title_->GetPosition();
+	RefreshTextRefs();
 
 	selected_ = kMenuStart;
 
@@ -112,7 +102,29 @@ void TitleScene::Initialize() {
 	fadeScreen_->Initialize();
 }
 
+void TitleScene::RefreshTextRefs() {
+	auto* tm = TextManager::GetInstance();
+	// LoadTextLayout でテキストは作り直されるので、古いポインタは使わず名前で引き直す。
+	for (int i = 0; i < kMenuCount; ++i) {
+		menuItems_[i] = tm->GetTextByName(kMenuNames[i]);
+		// JSON 由来の位置を「最終位置」として覚える（登場アニメはここへ寄せる）。
+		if (menuItems_[i])
+			menuHome_[i] = menuItems_[i]->GetPosition();
+	}
+	cursor_ = tm->GetTextByName("cursor");
+	title_ = tm->GetTextByName("title");
+	hint_ = tm->GetTextByName("hint");
+	if (title_)
+		titleHome_ = title_->GetPosition();
+	textRevision_ = tm->GetLayoutRevision();
+}
+
 void TitleScene::Update() {
+	// ImGui の TextManager パネルでレイアウトを読み込み直した等で、テキストが作り直されていたら取り直す
+	if (TextManager::GetInstance()->GetLayoutRevision() != textRevision_) {
+		RefreshTextRefs();
+	}
+
 	const float dt = TuboEngine::Time::DeltaTime();
 	animTime_ += dt;
 	introTimer_ += dt;

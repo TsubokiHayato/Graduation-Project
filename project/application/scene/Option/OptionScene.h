@@ -54,6 +54,8 @@ private:
 	std::vector<TuboEngine::TextObject*> labelTexts_; // 各項目のラベル
 	std::vector<TuboEngine::TextObject*> valueTexts_; // 各項目の値（アクション項目は nullptr）
 	TuboEngine::TextObject* cursor_ = nullptr;
+	// 上のポインタを作った時の TextManager::GetLayoutRevision()。変わったら作り直す
+	uint32_t textRevision_ = 0;
 
 	int selected_ = 0;
 
