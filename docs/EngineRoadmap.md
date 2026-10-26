@@ -237,6 +237,19 @@ public:
 | ショートカットの整理 | Ctrl+Shift+P と Ctrl+Alt+P は同時押しで両方反応する（[3 章 #12](#3-バグになりそうな箇所)） |
 | Console の改良 | ログに種類（Info/Warning/Error）を持たせる。今は文字列に「error」等が含まれるかで判定 |
 
+
+### 1-4. 追加の予定表（エディタ改善・2026-10-26〜）
+
+| # | 項目 | 状態 | 目安 | 予定日 |
+|---|---|---|---|---|
+| 8 | **Project ウィンドウのパンくずで落ちる不具合**（Textures を開いて上の `Resources` を押すとエラー） | ✅ 修正済 | 0.5 日 | 10/26（月） |
+| 9 | **オブジェクトのテクスチャを変える**（Inspector にドロップ / Project で選択中の画像を使う） | ✅ | 1 日 | 10/26（月）〜 10/27（火） |
+| 10 | **実行中の変更をオブジェクトごとに保存**（任意。保存しなければ次回は元に戻る） | ✅ | 1.5 日 | 10/27（火）〜 10/28（水） |
+| 11 | **Hierarchy のフォルダ分け**（作成・名前変更・削除・ドラッグで出し入れ） | ✅ | 1.5 日 | 10/29（木）〜 10/30（金） |
+| — | 予備（触って確認・直し） | — | 1 日 | 11/2（月） |
+
+> 実装は EngineCore ブランチ `Ver7.1_Feature_EditorImprove` / 親リポジトリ ブランチ `Ver1.2_Feature_EditorImprove`。使い方は [2-11](#2-11-ver71-で追加したものエディタ改善)。
+
 ---
 
 ## 2. 実装済み機能の仕組みと使い方
@@ -605,6 +618,46 @@ if (player_.IsFinished()) { ... }
 
 ---
 
+### 2-11. Ver7.1 で追加したもの（エディタ改善）
+
+#### オブジェクトのテクスチャを変える
+
+- Hierarchy でオブジェクトを選び、Inspector の **Texture** 欄で変える。
+  - Project ウィンドウから画像を **「ここに画像をドロップ」にドラッグ**
+  - または Project ウィンドウで画像を**クリックで選んで**「Project で選択中の画像を使う」
+  - 「元に戻す」でモデル本来のテクスチャへ（Object3d / Animator）
+- 読み込めない画像は差し替えない（赤字で表示。描画で落ちない）。
+- コードからは: `obj->SetTexture("player_red.png")` / `obj->ClearTexture()` / `obj->GetTexture()`（Resources/Textures からのパス）。
+  **このオブジェクトだけ**変わる（同じモデルを使う他のオブジェクトはそのまま）。Sprite は従来どおり `SetTexture`。
+
+#### 実行中の変更を保存する（任意）
+
+- 実行中に Inspector / Gizmo で動かすと、Hierarchy の名前に **`*`** が付く（「保存しないと次回は戻る」の印）。
+- 残したいものだけ保存する:
+  - Inspector の **「この状態を保存」** / Hierarchy で右クリック →「この状態を保存」
+  - Hierarchy 上の **「変更をすべて保存 (n)」** で `*` の付いた物をまとめて
+  - 「変更を元に戻す」で、シーン開始時（または最後に保存した時）の値へ。「保存を削除」で保存を消す
+- 保存先は `Resources/SceneData/<シーン名>.json`（位置・回転・拡縮・色・テクスチャ）。
+- **シーン側で1行呼ぶと、次回の起動から反映される（Release でも）**:
+
+```cpp
+#include "SceneSaveData.h"
+// Initialize で、オブジェクトを作った後に（名前は Editor::Inspect と同じ）
+TuboEngine::SceneSaveData::Apply("player", player_.get());   // Object3d / Animator / Sprite / TextObject
+```
+
+- Apply を呼んでいないシーンで保存すると、Inspector に「まだ保存値を読み込んでいません」と出る。
+- TsubokiScene は human / axis / ground で Apply 済み。
+
+#### Hierarchy のフォルダ分け
+
+- **「+ フォルダ」** で作成。フォルダを右クリック →「この中に新しいフォルダ」「名前を変更」「削除（中身は1つ上へ）」。
+- オブジェクトを**フォルダにドラッグ**で入れる。**シーン名（一番上）にドラッグ**でフォルダから出す。フォルダごとドラッグして別のフォルダの中へ移すこともできる。
+- フォルダ構成は変えた時点で `Resources/SceneData/<シーン名>.json` に保存される（オブジェクトの値の保存とは別。次回もそのまま）。
+- エディタ上の整理だけで、ゲームの動きには影響しない。
+
+---
+
 ## 3. バグになりそうな箇所
 
 重要度: **高** = 実際に値が壊れる・落ちる可能性が高い / **中** = 条件次第で起きる / **低** = 今は問題ないが将来ハマる
@@ -629,6 +682,7 @@ if (player_.IsFinished()) { ... }
 | 16 | 低 | `ImGuiManager::Finalize` | `delete instance` が `#ifdef USE_IMGUI` の中 | ImGui 無しビルドでわずかにリーク |
 | 17 | 低 | `ParticleManager::GetInstance` | 関数内 static。最初の `GetInstance()` 時に JSON を読み、プログラム終了時にもデストラクタが走る | 初期化順序や終了順序が見えにくい。他のシングルトンと同じ明示的な Initialize/Finalize に寄せると安全 |
 | 18 | **高** ✅修正済 | `TextManager::LoadTextLayout` / TitleScene・OptionScene | レイアウトを読み込むとテキストが全部作り直されるのに、シーンは `GetTextByName` で取った古いポインタを使い続けていた | ImGui の TextManager パネルで Load すると**アクセス違反で落ちる**。→ `GetLayoutRevision()` が変わったらシーンが取り直す。Load ボタンは次の `UpdateAll` で読み込む |
+| 19 | **高** ✅修正済 | [EditorPanels.cpp](../project/EngineCore/engine/imgui/EditorPanels.cpp) Project ウィンドウのパンくず | パスの要素を回しているループの中で、そのパス（currentDir）自体を書き換えていた | Textures などを開いて上の `Resources` ボタンを押すと **Debug で停止（0x80000003）**。→ 押された先を覚えてループの後で移動 |
 
 ### Ver7.0 での修正内容
 
