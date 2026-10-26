@@ -65,6 +65,9 @@
     <ClCompile Include="application\audio\AudioManager.cpp">
       <Filter>application\audio</Filter>
     </ClCompile>
+    <ClCompile Include="application\scene\Member\PlayerData.cpp">
+      <Filter>application\scene\Member</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FadeScreen.h" />
@@ -106,6 +109,9 @@
     </ClInclude>
     <ClInclude Include="application\audio\AudioManager.h">
       <Filter>application\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Member\PlayerData.h">
+      <Filter>application\scene\Member</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
