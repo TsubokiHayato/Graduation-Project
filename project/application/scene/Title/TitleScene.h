@@ -43,6 +43,8 @@ private:
 	int TakeVerticalInput() const;
 	// 決定入力（Enter/Space/Aボタン）のトリガー。
 	bool TakeDecideInput() const;
+	// TextManager からメニュー等のテキストを名前で取り直す（レイアウトを読み込み直した時も呼ぶ）。
+	void RefreshTextRefs();
 
 	std::unique_ptr<TuboEngine::Camera> camera_;
 
@@ -54,6 +56,8 @@ private:
 	TuboEngine::TextObject* cursor_ = nullptr;
 	TuboEngine::TextObject* title_ = nullptr; // タイトル文字（登場アニメ用）
 	TuboEngine::TextObject* hint_ = nullptr;  // 操作ヒント（登場アニメ用）
+	// 上のポインタを取った時の TextManager::GetLayoutRevision()。変わったら取り直す
+	uint32_t textRevision_ = 0;
 
 	int selected_ = kMenuStart;
 

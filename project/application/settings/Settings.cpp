@@ -1,9 +1,9 @@
 #include "settings/Settings.h"
 
-#include <externals/nlohmann/json.hpp>
-#include <fstream>
+#include "JsonManager.h"
 
-using nlohmann::json;
+// Settings ⇔ JSON の変換（項目は Settings.h の SETTINGS_FIELDS）
+TUBO_JSON_DEFINE(Settings, SETTINGS_FIELDS)
 
 Settings* Settings::instance_ = nullptr;
 
@@ -21,34 +21,10 @@ void Settings::ResetToDefault() {
 }
 
 bool Settings::Save() const {
-	json j;
-	// ★項目を増やしたらここに1行足す
-	j["bgmVolume"] = bgmVolume;
-	j["seVolume"]  = seVolume;
-
-	std::ofstream ofs(kFilePath);
-	if (!ofs) {
-		return false;
-	}
-	ofs << j.dump(2);
-	return true;
+	return TuboEngine::JsonManager::SaveObject(kFilePath, *this);
 }
 
 bool Settings::Load() {
-	std::ifstream ifs(kFilePath);
-	if (!ifs) {
-		return false; // 未保存なら既定値のまま
-	}
-
-	json j;
-	try {
-		ifs >> j;
-	} catch (...) {
-		return false;
-	}
-
-	// ★項目を増やしたらここに1行足す（第2引数=既定値なのでキーが無くても安全）
-	bgmVolume = j.value("bgmVolume", bgmVolume);
-	seVolume  = j.value("seVolume", seVolume);
-	return true;
+	// 未保存（初回起動）なら既定値のまま。ファイルが無いのは正常なのでログは出さない
+	return TuboEngine::JsonManager::LoadObject(kFilePath, *this, /*logIfMissing*/ false);
 }
