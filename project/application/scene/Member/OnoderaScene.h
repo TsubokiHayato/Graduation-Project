@@ -3,7 +3,7 @@
 #include "Camera.h"
 #include "Object3d.h"
 #include <memory>
-#include "Player.h"
+#include "Player/Player.h"
 
 // Onodera 個人用の作業シーン
 class OnoderaScene : public IScene {

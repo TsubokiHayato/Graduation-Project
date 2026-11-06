@@ -118,8 +118,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="application\scene\Member\Player.cpp" />
-    <ClCompile Include="application\scene\Member\PlayerDataJson.cpp" />
+    <ClCompile Include="application\scene\Player\Player.cpp" />
+    <ClCompile Include="application\scene\Player\PlayerDataJson.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="FadeScreen.cpp" />
     <ClCompile Include="application\Order.cpp" />
@@ -136,9 +136,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="application\audio\AudioManager.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="application\scene\Member\Player.h" />
-    <ClInclude Include="application\scene\Member\PlayerData.h" />
-    <ClInclude Include="application\scene\Member\PlayerDataJson.h" />
+    <ClInclude Include="application\scene\Player\Player.h" />
+    <ClInclude Include="application\scene\Player\PlayerData.h" />
+    <ClInclude Include="application\scene\Player\PlayerDataJson.h" />
     <ClInclude Include="FadeScreen.h" />
     <ClInclude Include="application\Order.h" />
     <ClInclude Include="application\scene\GameScenes.h" />

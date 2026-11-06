@@ -25,6 +25,9 @@
     <Filter Include="application\audio">
       <UniqueIdentifier>{4eba0ed1-8bf0-4e44-bb0b-002251f11a3b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="application\scene\Player">
+      <UniqueIdentifier>{e29ee866-2a22-4ddd-a4f4-dbb29b22a8ef}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -65,11 +68,11 @@
     <ClCompile Include="application\audio\AudioManager.cpp">
       <Filter>application\audio</Filter>
     </ClCompile>
-    <ClCompile Include="application\scene\Member\Player.cpp">
-      <Filter>application\scene</Filter>
+    <ClCompile Include="application\scene\Player\Player.cpp">
+      <Filter>application\scene\Player</Filter>
     </ClCompile>
-    <ClCompile Include="application\scene\Member\PlayerDataJson.cpp">
-      <Filter>application\scene</Filter>
+    <ClCompile Include="application\scene\Player\PlayerDataJson.cpp">
+      <Filter>application\scene\Player</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -113,14 +116,14 @@
     <ClInclude Include="application\audio\AudioManager.h">
       <Filter>application\audio</Filter>
     </ClInclude>
-    <ClInclude Include="application\scene\Member\Player.h">
-      <Filter>application\scene</Filter>
+    <ClInclude Include="application\scene\Player\Player.h">
+      <Filter>application\scene\Player</Filter>
     </ClInclude>
-    <ClInclude Include="application\scene\Member\PlayerDataJson.h">
-      <Filter>application\scene</Filter>
+    <ClInclude Include="application\scene\Player\PlayerData.h">
+      <Filter>application\scene\Player</Filter>
     </ClInclude>
-    <ClInclude Include="application\scene\Member\PlayerData.h">
-      <Filter>application\scene</Filter>
+    <ClInclude Include="application\scene\Player\PlayerDataJson.h">
+      <Filter>application\scene\Player</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
