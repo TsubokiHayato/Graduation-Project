@@ -5,6 +5,7 @@
 #include "TextManager.h"
 #include "LineManager.h"
 #include "EditorObjects.h"
+#include "SceneSaveData.h"
 #include "GameTime.h"
 #include <algorithm>
 #include <cmath>
@@ -73,6 +74,11 @@ void TsubokiScene::Initialize() {
 	animController_.AddTransition("*", "SneakWalk", {{"moving", Op::True}, {"sneak", Op::True}});
 	animController_.AddTransition("*", "Walk", {{"moving", Op::True}, {"sneak", Op::False}});
 	animController_.SetDefaultState("Idle");
+
+	// エディタで保存した位置・テクスチャなどを反映する（保存が無ければ何もしない。名前は Editor::Inspect と同じ）
+	SceneSaveData::Apply("human", human_.get());
+	SceneSaveData::Apply("axis", axis_.get());
+	SceneSaveData::Apply("ground", ground_.get());
 }
 
 TuboEngine::Animation TsubokiScene::CreateIdlePose() const {
