@@ -671,7 +671,7 @@ TuboEngine::SceneSaveData::Apply("player", player_.get());   // Object3d / Anima
 
 ### 2-12. UniversalCamera（追従カメラ）— `engine/camera/UniversalCamera.h`
 
-ターゲットを追従するカメラ。**視点切り替え（真後ろ / 後ろ斜め / 見下ろし）・ロックオン・シェイク・FOV・キーフレーム**をまとめて持つ。
+ターゲットを追従するカメラ。**視点切り替え（真後ろ / 頭上後ろ斜め / 見下ろし）・ロックオン・シェイク・FOV・キーフレーム**をまとめて持つ。
 
 ```cpp
 #include "UniversalCamera.h"
