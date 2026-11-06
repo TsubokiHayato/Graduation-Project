@@ -33,6 +33,7 @@ public:
         return hasCurrent_;
     }
 private:
+	// JSON全体のデータ
     PlayerDataJsonFormat jsonData_{};
     // JSONに最新値が存在するか
     bool hasCurrent_ = false;
@@ -43,7 +44,7 @@ private:
     // 戻り値はdoubleにする
     static double Round3(float value) { return std::round(static_cast<double>(value) * 1000.0) / 1000.0; }
 };
-
+// JSONに変換するためのマクロ(Transform)
 #define PLAYER_TRANSFORM_FIELDS(X) \
     X("scale", scale)              \
     X("rotate", rotate)            \
@@ -51,12 +52,13 @@ private:
 
 namespace TuboEngine { TUBO_JSON_DEFINE(Transform, PLAYER_TRANSFORM_FIELDS) }
 
+// ★各パラメータの項目。増やしたらここに1行足す（保存・読み込みが使う）
 #define PLAYER_DATA_FIELDS(X) \
     X("transform", transform) \
     X("speed", speed)
 
 TUBO_JSON_DEFINE(PlayerData, PLAYER_DATA_FIELDS)
-
+// 初期値と最新値の2つを持つJSONの項目一覧
 #define PLAYER_JSON_FIELDS(X)       \
     X("default", defaultData)       \
     X("current", currentData)

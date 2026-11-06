@@ -5,5 +5,6 @@ struct PlayerData {
     // Transform
     TuboEngine::Transform transform;
     // 移動速度
-    float speed = 0.1f;
+    float speed;
+
 };
