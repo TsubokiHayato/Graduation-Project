@@ -652,7 +652,8 @@ TuboEngine::SceneSaveData::Apply("player", player_.get());   // Object3d / Anima
 #### Hierarchy のフォルダ分け
 
 - **「+ フォルダ」** で作成。フォルダを右クリック →「この中に新しいフォルダ」「名前を変更」「削除（中身は1つ上へ）」。
-- オブジェクトを**フォルダにドラッグ**で入れる。**シーン名（一番上）にドラッグ**でフォルダから出す。フォルダごとドラッグして別のフォルダの中へ移すこともできる。
+- オブジェクトや**タブ（デバッグウィンドウ: Human / Scene など）**を**フォルダにドラッグ**で入れる。**シーン名（一番上）にドラッグ**でフォルダから出す。フォルダごとドラッグして別のフォルダの中へ移すこともできる。
+- ドラッグしなくても、**右クリック →「フォルダへ移動 ▸」/「フォルダから出す」**でもできる。
 - フォルダ構成は変えた時点で `Resources/SceneData/<シーン名>.json` に保存される（オブジェクトの値の保存とは別。次回もそのまま）。
 - エディタ上の整理だけで、ゲームの動きには影響しない。
 
@@ -683,6 +684,7 @@ TuboEngine::SceneSaveData::Apply("player", player_.get());   // Object3d / Anima
 | 17 | 低 | `ParticleManager::GetInstance` | 関数内 static。最初の `GetInstance()` 時に JSON を読み、プログラム終了時にもデストラクタが走る | 初期化順序や終了順序が見えにくい。他のシングルトンと同じ明示的な Initialize/Finalize に寄せると安全 |
 | 18 | **高** ✅修正済 | `TextManager::LoadTextLayout` / TitleScene・OptionScene | レイアウトを読み込むとテキストが全部作り直されるのに、シーンは `GetTextByName` で取った古いポインタを使い続けていた | ImGui の TextManager パネルで Load すると**アクセス違反で落ちる**。→ `GetLayoutRevision()` が変わったらシーンが取り直す。Load ボタンは次の `UpdateAll` で読み込む |
 | 19 | **高** ✅修正済 | [EditorPanels.cpp](../project/EngineCore/engine/imgui/EditorPanels.cpp) Project ウィンドウのパンくず | パスの要素を回しているループの中で、そのパス（currentDir）自体を書き換えていた | Textures などを開いて上の `Resources` ボタンを押すと **Debug で停止（0x80000003）**。→ 押された先を覚えてループの後で移動 |
+| 20 | **高** ✅修正済 | [EditorObjects.cpp](../project/EngineCore/engine/imgui/EditorObjects.cpp) / ImGuiManager.cpp の Hierarchy | 項目を**押した瞬間**に Inspector（タブはそのウィンドウ）へフォーカスを移していたため、ImGui がつかんだ状態を解除してしまう | オブジェクト・タブを**フォルダへドラッグできない**。→ 押した時は選択だけ、前面に出すのはドラッグせずに離した時。タブもフォルダに入れられるようにした |
 
 ### Ver7.0 での修正内容
 
