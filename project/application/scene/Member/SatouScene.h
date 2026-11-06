@@ -1,8 +1,10 @@
 #pragma once
 #include "IScene.h"
 #include "Camera.h"
+#include "DebugCamera.h"  // F2 で切り替わるデバッグ用フリーカメラ
 #include "Object3d.h"
 #include <memory>
+#include "Boss.h"
 
 // Satou 個人用の作業シーン
 class SatouScene : public IScene {
@@ -18,7 +20,10 @@ public:
 
 private:
 	std::unique_ptr<TuboEngine::Camera> camera_;
+	std::unique_ptr<TuboEngine::DebugCamera> debugCamera_; // F2 で乗っ取るフリーカメラ
 
 	// 座標軸（動作確認用。不要なら消してOK）
 	std::unique_ptr<TuboEngine::Object3d> axis_;
+
+	std::unique_ptr<Boss> boss_;
 };
