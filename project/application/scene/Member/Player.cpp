@@ -30,7 +30,28 @@ void Player::Initialize(TuboEngine::Camera* camera) {
 // Update
 // =========================================
 void Player::Update() {
+    // 死亡中なら更新しない
+    if (state_ == PlayerState::Dead) {
+        return;
+    }
+
     Input* input = Input::GetInstance();
+    // 無敵時間更新
+    UpdateInvincible();
+    // =========================================
+    // Qキーでダメージを受ける（確認用）
+    // =========================================
+    bool qPressed = input->PushKey(DIK_Q);
+    // 押した瞬間だけ判定
+    bool qTrigger = qPressed && !qWasPressed_;
+    qWasPressed_ = qPressed;
+    if (qTrigger) {
+        TakeDamage();
+    }
+
+    // =========================================
+    // ダッシュ処理
+    // =========================================
     // クールタイム管理
     if (dashCooldownTimer_ > 0) {
         dashCooldownTimer_--;
@@ -151,6 +172,67 @@ void Player::Draw() {
 }
 
 // =========================================
+// ダメージ処理
+// =========================================
+void Player::TakeDamage() {
+    // 無敵時間中ならダメージを受けない
+    if (IsInvincible()) {
+        return;
+    }
+    // HPを減らす
+    currentHP_ -= damage_;
+    // HPが0以下にならないようにする
+    if (currentHP_ < 0) {
+        currentHP_ = 0;
+    }
+    // HPが0になったら死亡
+    if (currentHP_ <= 0) {
+        Die();
+        return;
+    }
+    // 無敵時間を開始
+    invincibleTimer_ = invincibleDuration_;
+}
+
+// =========================================
+// 無敵時間更新
+// =========================================
+void Player::UpdateInvincible() {
+
+    if (invincibleTimer_ > 0) {
+        invincibleTimer_--;
+    }
+}
+
+// =========================================
+// HPリセット
+// =========================================
+void Player::ResetHP() {
+    // HPを最大値に戻す
+    currentHP_ = maxHP_;
+}
+
+// =========================================
+// 生存状態にする
+// =========================================
+void Player::SetAlive() {
+    // HPを最大値に戻す
+    currentHP_ = maxHP_;
+    // 生存状態に変更
+    state_ = PlayerState::Alive;
+}
+
+// =========================================
+// 死亡状態にする
+// =========================================
+void Player::SetDead() {
+    // HPを0にする
+    currentHP_ = 0;
+    // 死亡処理
+    Die();
+}
+
+// =========================================
 // ImGui
 // =========================================
 void Player::DrawImGui() {
@@ -158,6 +240,16 @@ void Player::DrawImGui() {
 
     object_->DrawImGui("Player");
 
+    // プレイヤー状態
+    ImGui::Text("Player State:");
+
+    if (state_ == PlayerState::Alive) {
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "Alive");
+    } else {
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "Dead");
+    }
 
     ImGui::Separator();
 	// 移動速度の調整
@@ -172,6 +264,154 @@ void Player::DrawImGui() {
         );
     }
 
+    ImGui::Separator();
+
+    // =========================================
+    // Dash 状態表示
+    // =========================================
+    if (ImGui::CollapsingHeader("Dash", ImGuiTreeNodeFlags_DefaultOpen)) {
+        // ダッシュ状態
+        ImGui::Text("State:");
+
+        if (isDashing_) {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(0.2f, 0.8f, 1.0f, 1.0f), "Dashing");
+        } else if (dashCooldownTimer_ > 0) {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "Cooldown");
+        } else {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "Ready");
+        }
+
+        ImGui::Spacing();
+
+        // クールタイムゲージ
+        ImGui::Text("Cooldown");
+        float cooldownRate = 0.0f;
+        if (dashCooldown_ > 0) {
+            cooldownRate = static_cast<float>(dashCooldownTimer_) / static_cast<float>(dashCooldown_);
+        }
+
+        char cooldownText[64];
+        std::snprintf(cooldownText, sizeof(cooldownText), "%d / %d Frames", dashCooldownTimer_, dashCooldown_);
+        ImGui::ProgressBar(cooldownRate, ImVec2(-1.0f, 0.0f), cooldownText);
+        ImGui::Spacing();
+
+        // ダッシュ中の進行度
+        ImGui::Text("Dash Progress");
+        float dashRate = 0.0f;
+        if (isDashing_ && dashDuration_ > 0) {
+            dashRate = static_cast<float>(dashTimer_) / static_cast<float>(dashDuration_);
+        }
+        char dashText[64];
+        std::snprintf(dashText, sizeof(dashText), "%d / %d Frames", dashTimer_, dashDuration_);
+        ImGui::ProgressBar(dashRate, ImVec2(-1.0f, 0.0f), dashText);
+    }
+
+    ImGui::Separator();
+
+    // =========================================
+    // HP設定・表示
+    // =========================================
+    if (ImGui::CollapsingHeader("HP", ImGuiTreeNodeFlags_DefaultOpen)) {
+        // 最大HP
+        ImGui::InputInt("Max HP", &maxHP_);
+        // 最大HPは1以上
+        if (maxHP_ < 1) {
+            maxHP_ = 1;
+        }
+
+        // 現在HPは最大HP以下にする
+        if (currentHP_ > maxHP_) {
+            currentHP_ = maxHP_;
+        }
+
+        // 現在HP
+        ImGui::InputInt("Current HP", &currentHP_);
+
+        // 現在HPの範囲を制限
+        if (currentHP_ < 0) {
+            currentHP_ = 0;
+        }
+
+        if (currentHP_ > maxHP_) {
+            currentHP_ = maxHP_;
+        }
+
+        // ダメージ量
+        ImGui::InputInt("Damage", &damage_);
+
+        if (damage_ < 0) {
+            damage_ = 0;
+        }
+
+        ImGui::Spacing();
+
+        // HPゲージ
+        ImGui::Text("HP");
+
+        float hpRate = static_cast<float>(currentHP_) / static_cast<float>(maxHP_);
+
+        char hpText[64];
+
+        std::snprintf(hpText, sizeof(hpText), "%d / %d", currentHP_, maxHP_);
+        ImGui::ProgressBar(hpRate, ImVec2(-1.0f, 0.0f), hpText);
+
+        ImGui::Spacing();
+        ImGui::Separator();
+
+        // 無敵時間の設定
+        ImGui::Text("Invincible Settings");
+
+        ImGui::InputInt("Invincible Duration", &invincibleDuration_);
+
+        if (invincibleDuration_ < 0) {
+            invincibleDuration_ = 0;
+        }
+
+        // 無敵時間ゲージ
+        ImGui::Text("Invincible Time");
+
+        float invincibleRate = 0.0f;
+
+        if (invincibleDuration_ > 0) {
+            invincibleRate = static_cast<float>(invincibleTimer_) / static_cast<float>(invincibleDuration_);
+        }
+        char invincibleText[64];
+        std::snprintf(invincibleText, sizeof(invincibleText), "%d / %d Frames", invincibleTimer_, invincibleDuration_);
+        ImGui::ProgressBar(invincibleRate, ImVec2(-1.0f, 0.0f), invincibleText);
+
+        // 無敵状態
+        if (IsInvincible()) {
+            ImGui::TextColored(ImVec4(0.2f, 0.8f, 1.0f, 1.0f), "INVINCIBLE");
+        } else {
+            ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "Normal");
+        }
+    }
+
+    ImGui::Separator();
+
+    ImGui::Text("Player Control");
+
+    // HPリセット
+    if (ImGui::Button("Reset HP", ImVec2(120.0f, 30.0f))) {
+        ResetHP();
+    }
+
+    ImGui::SameLine();
+
+    // 強制的に生存
+    if (ImGui::Button("Alive", ImVec2(120.0f, 30.0f))) {
+        SetAlive();
+    }
+
+    ImGui::SameLine();
+
+    // 強制的に死亡
+    if (ImGui::Button("Dead", ImVec2(120.0f, 30.0f))) {
+        SetDead();
+    }
 
     ImGui::Separator();
 
@@ -200,4 +440,23 @@ void Player::DrawImGui() {
 
     ImGui::EndDisabled();
 #endif
+}
+
+// =========================================
+// 死亡処理
+// =========================================
+void Player::Die() {
+    // すでに死亡している場合は何もしない
+    if (state_ == PlayerState::Dead) {
+        return;
+    }
+    // 死亡状態に変更
+    state_ = PlayerState::Dead;
+    // ダッシュを停止
+    isDashing_ = false;
+    // 無敵時間を停止
+    invincibleTimer_ = 0;
+    // ダッシュ関連のタイマーを停止
+    dashTimer_ = 0;
+    dashCooldownTimer_ = 0;
 }
