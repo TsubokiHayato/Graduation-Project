@@ -15,6 +15,7 @@ void Player::Initialize(TuboEngine::Camera* camera) {
     object_->Initialize("block/block.obj");
     object_->SetCamera(camera);
   
+    // プレイヤ―のJsonデータ読み込みクラスの生成
     dataJson_ = std::make_unique<PlayerDataJson>();
 
     // JSON読み込み
@@ -24,6 +25,9 @@ void Player::Initialize(TuboEngine::Camera* camera) {
         object_->SetRotation(data_.transform.rotate);
         object_->SetScale(data_.transform.scale);
     }
+    // 移動処理クラスの生成、初期化
+    movement_ = std::make_unique<PlayerMovement>();
+    movement_->Initialize(object_.get());
 }
 
 // =========================================
@@ -73,23 +77,10 @@ void Player::Update() {
         UpdateDash();
     } else {
         // 通常移動
-        Move();
+        movement_->Move(data_.speed);
     }
     // モデル更新
     object_->Update();
-}
-
-// =========================================
-// 通常移動
-// =========================================
-void Player::Move() {
-    Input* input = Input::GetInstance();
-    Math::Vector3 pos = object_->GetPosition();
-    if (input->PushKey(DIK_D)) pos.x += data_.speed;
-    if (input->PushKey(DIK_A)) pos.x -= data_.speed;
-    if (input->PushKey(DIK_S)) pos.z -= data_.speed;
-    if (input->PushKey(DIK_W)) pos.z += data_.speed;
-    object_->SetPosition(pos);
 }
 
 // =========================================

@@ -4,6 +4,7 @@
 #include <memory>
 #include "PlayerDataJson.h"
 #include "PlayerData.h"
+#include "PlayerMovement.h"
 
 enum class PlayerState {
     Alive,  // 生存中
@@ -23,8 +24,6 @@ public:
     // ImGui
     void DrawImGui();
 
-    // 通常移動処理
-    void Move();
     // ダッシュ開始処理
     void StartDash();
     // ダッシュ更新処理
@@ -57,6 +56,8 @@ private:
     std::unique_ptr <PlayerDataJson> dataJson_;
     // 現在の状態
     PlayerState state_ = PlayerState::Alive;
+    // 移動処理関連クラス
+    std::unique_ptr <PlayerMovement> movement_;
 
     // プレイヤー本体
     std::unique_ptr<TuboEngine::Object3d> object_;
