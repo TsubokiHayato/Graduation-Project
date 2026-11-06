@@ -669,6 +669,52 @@ TuboEngine::SceneSaveData::Apply("player", player_.get());   // Object3d / Anima
 
 ---
 
+### 2-12. UniversalCamera（追従カメラ）— `engine/camera/UniversalCamera.h`
+
+ターゲットを追従するカメラ。**視点切り替え（真後ろ / 後ろ斜め / 見下ろし）・ロックオン・シェイク・FOV・キーフレーム**をまとめて持つ。
+
+```cpp
+#include "UniversalCamera.h"
+std::unique_ptr<TuboEngine::UniversalCamera> camera_;
+
+// Initialize
+camera_ = std::make_unique<TuboEngine::UniversalCamera>();
+camera_->LoadPresets("Resources/Camera/presets.json", false);       // ImGui で調整して Save したもの（無ければ初期値）
+camera_->AddTarget("player", [this] { return player_->GetPosition(); }, [this] { return player_->GetRotation().y; });
+camera_->AddTarget("boss", [this] { return boss_->GetPosition(); }); // 向きが要らなければ省略
+camera_->SetTarget("player", 0.0f);                                  // 0 = 切り替えアニメ無し
+player_->SetCamera(camera_->GetCamera());                            // オブジェクトにはこれを渡す
+
+// Update（ターゲットを動かした「後」、オブジェクトの Update の「前」）
+camera_->Update(TuboEngine::Time::DeltaTime());
+
+// GetMainCamera
+return camera_->GetCamera();
+
+// ImGuiDraw（操作画面。Hierarchy にも [Cam] Camera が出る）
+camera_->DrawImGui();
+```
+
+| やりたいこと | 書き方 |
+|---|---|
+| 追従対象を変える（イージング付き） | `camera_->SetTarget("boss", 0.6f, Easing::Type::InOutCubic)` |
+| 視点を変える | `camera_->SetViewMode(UniversalCamera::ViewMode::TopDown)`（Behind / BehindDiagonal / TopDown） |
+| ロックオン | `camera_->LockOn("boss")` / `camera_->ClearLockOn()` — 自分の後ろから相手の方を向き、注視点を相手側へ寄せる |
+| 揺らす | `camera_->Shake(0.6f)`（0〜1。足すほど強く、時間で収まる） |
+| 一瞬だけ画角を広げる | `camera_->KickFov(8.0f, 0.35f)`（ダッシュ・被弾） |
+| 速度などで画角を上乗せ | `camera_->SetFovOffset(speed * 0.5f)`（毎フレーム呼んでよい。なめらかに追う） |
+| カットシーン | `camera_->PlayClip(&clip, 0.5f, 0.5f)` — Timeline で作った `camera:eye / camera:lookAt / camera:fov` を再生し、終わると追従へ戻る |
+
+- 切り替えは「切り替えた瞬間のカメラ」から「毎フレーム計算し直した目標」へイージングするので、ターゲットが動いていても、途中で切り替え直しても跳ばない。
+- 回転は「eye → lookAt の向き」から決める（オイラー角どうしを補間しない）。
+- 視点ごとの設定（距離・見下ろす角度・横にずらす角度・注視点の高さ・肩越し・先読み・向きに合わせるか・追従の速さ・画角）は ImGui で変えて `Save` → `Resources/Camera/presets.json`。
+- **カメラのキーフレームの作り方**: Hierarchy の `[Cam] Camera` を選ぶ → Inspector の Eye / LookAt / FOV で位置を決める（手動になる）→ Timeline で「カメラ位置 / 注視点 / 画角」にキー → 時間を変えて繰り返し → Save。「追従に戻す」で追従へ。
+- 使用例: TsubokiScene（human を追従、**Q で axis にロックオン**）。
+
+> 修正: `Camera` のコンストラクタで `Transform` の並び（scale, rotate, translate）を取り違えていて、**scale が 0** になっていた。`setScale({1,1,1})` を呼ばないと行列が NaN になり画面が真っ黒になる。コンストラクタを直したので、今後は呼ばなくても正しく描ける。
+
+---
+
 ## 3. バグになりそうな箇所
 
 重要度: **高** = 実際に値が壊れる・落ちる可能性が高い / **中** = 条件次第で起きる / **低** = 今は問題ないが将来ハマる
@@ -695,6 +741,7 @@ TuboEngine::SceneSaveData::Apply("player", player_.get());   // Object3d / Anima
 | 18 | **高** ✅修正済 | `TextManager::LoadTextLayout` / TitleScene・OptionScene | レイアウトを読み込むとテキストが全部作り直されるのに、シーンは `GetTextByName` で取った古いポインタを使い続けていた | ImGui の TextManager パネルで Load すると**アクセス違反で落ちる**。→ `GetLayoutRevision()` が変わったらシーンが取り直す。Load ボタンは次の `UpdateAll` で読み込む |
 | 19 | **高** ✅修正済 | [EditorPanels.cpp](../project/EngineCore/engine/imgui/EditorPanels.cpp) Project ウィンドウのパンくず | パスの要素を回しているループの中で、そのパス（currentDir）自体を書き換えていた | Textures などを開いて上の `Resources` ボタンを押すと **Debug で停止（0x80000003）**。→ 押された先を覚えてループの後で移動 |
 | 20 | **高** ✅修正済 | [EditorObjects.cpp](../project/EngineCore/engine/imgui/EditorObjects.cpp) / ImGuiManager.cpp の Hierarchy | 項目を**押した瞬間**に Inspector（タブはそのウィンドウ）へフォーカスを移していたため、ImGui がつかんだ状態を解除してしまう | オブジェクト・タブを**フォルダへドラッグできない**。→ 押した時は選択だけ、前面に出すのはドラッグせずに離した時。タブもフォルダに入れられるようにした |
+| 21 | **高** ✅修正済 | [Camera.cpp](../project/EngineCore/engine/camera/Camera.cpp) コンストラクタ | `Transform` は {scale, rotate, translate} の並びなのに {0, 0, 1} の順で初期化していて、scale が 0・translate が (1,1,1) になっていた | `setScale` を呼ばずに使うとビュー行列が NaN になり**画面が真っ黒**。→ 並びを直した |
 
 ### Ver7.0 での修正内容
 
