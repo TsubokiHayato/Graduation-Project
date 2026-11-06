@@ -4,7 +4,6 @@
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
 #endif
-#include "JsonManager.h"
 
 using namespace TuboEngine;
 
@@ -19,28 +18,9 @@ void OnoderaScene::Initialize() {
 	camera_->setScale({ 1.0f, 1.0f, 1.0f });
 	camera_->Update();
 
-	player_ = std::make_unique<Object3d>();
-	player_->Initialize("block/block.obj");
-	player_->SetCamera(camera_.get());
-	player_->SetPosition({ 0.0f, 0.0f, 0.0f });
-
-	// PlayerDataを生成
-	playerdata_ = std::make_unique<PlayerData>();
-
-	if (!playerdata_->Load(player_.get())) {
-		// 読み込み失敗時の初期位置
-		player_->SetPosition({ 0.0f, 0.0f, 0.0f });
-	}
-
-
-	// JSONを読み込む
-	//if (TuboEngine::JsonManager::LoadObject("Resources/Player.json", *playerdata_)) {
-	//	// JSONのtranslateをaxisの位置に設定
-	//	player_->SetPosition(playerdata_->transform.translate);
-	//} else {
-	//	// 読み込み失敗時の初期位置
-	//	player_->SetPosition({ 0.0f, 0.0f, 10.0f });
-	//}
+	// プレイヤ―の生成、初期化処理
+	player_ = std::make_unique<Player>();
+	player_->Initialize(camera_.get());
 }
 
 // =============================================================================
@@ -48,6 +28,8 @@ void OnoderaScene::Initialize() {
 // =============================================================================
 void OnoderaScene::Update() {
 	camera_->Update();
+
+	// プレイヤ―更新処理
 	player_->Update();
 
 	TextManager::GetInstance()->UpdateAll();
@@ -57,6 +39,7 @@ void OnoderaScene::Update() {
 //  描画フェーズ
 // =============================================================================
 void OnoderaScene::Object3DDraw() {
+	// プレイヤ―描画処理
 	player_->Draw();
 }
 
@@ -71,9 +54,7 @@ void OnoderaScene::ParticleDraw() {}
 // =============================================================================
 void OnoderaScene::ImGuiDraw() {
 #ifdef USE_IMGUI
-	player_->DrawImGui("3D Object : axis");
-
-	//playerdata_->DrawImGui(player_.get());
+	player_->DrawImGui();
 
 #endif
 }

@@ -1,7 +1,42 @@
 {
-  "transform": {
-    "scale": [ 1.0, 1.0, 1.0 ],
-    "rotate": [ 0.0, 0.0, 0.0 ],
-    "translate": [ 0.0, -2.0, 10.0 ]
+  "current": {
+    "speed": 0.17,
+    "transform": {
+      "rotate": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "translate": [
+        0.0,
+        -2.0,
+        10.0
+      ]
+    }
+  },
+  "default": {
+    "speed": 0.1,
+    "transform": {
+      "rotate": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "translate": [
+        0.0,
+        -2.0,
+        10.0
+      ]
+    }
   }
 }
