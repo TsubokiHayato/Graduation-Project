@@ -35,6 +35,9 @@ void Player::Update() {
         return;
     }
 
+    // ブースター更新
+    UpdateBooster();
+
     Input* input = Input::GetInstance();
     // 無敵時間更新
     UpdateInvincible();
@@ -87,6 +90,47 @@ void Player::Move() {
     if (input->PushKey(DIK_S)) pos.z -= data_.speed;
     if (input->PushKey(DIK_W)) pos.z += data_.speed;
     object_->SetPosition(pos);
+}
+
+// =========================================
+// ブースター更新
+// =========================================
+void Player::UpdateBooster() {
+    Input* input = Input::GetInstance();
+    // Shiftキーを押している間はブースト使用
+    isBoosting_ = input->PushKey(DIK_LSHIFT);
+
+    if (isBoosting_) {
+        // ブースター消費
+        currentBooster_ -= boosterConsumeRate_ / 60.0f;
+        // 0未満にならないようにする
+        if (currentBooster_ < 0.0f) {
+            currentBooster_ = 0.0f;
+        }
+        // 残量が0ならブースト終了
+        if (currentBooster_ <= 0.0f) {
+            isBoosting_ = false;
+        }
+    } else {
+        // ブースター回復
+        currentBooster_ += boosterRecoverRate_ / 60.0f;
+        // 最大値を超えないようにする
+        if (currentBooster_ > maxBooster_) {
+            currentBooster_ = maxBooster_;
+        }
+    }
+}
+
+// =========================================
+// ブースター出力取得
+// =========================================
+float Player::GetBoosterOutput() const {
+
+    if (maxBooster_ <= 0.0f) {
+        return 0.0f;
+    }
+
+    return currentBooster_ / maxBooster_;
 }
 
 // =========================================
@@ -262,6 +306,60 @@ void Player::DrawImGui() {
             0.1f,   // 上下ボタンの大きな変化量
             "%.3f"  // 小数点以下3桁表示
         );
+    }
+
+    ImGui::Separator();
+
+    // =========================================
+    // Booster
+    // =========================================
+    if (ImGui::CollapsingHeader("Booster", ImGuiTreeNodeFlags_DefaultOpen)) {
+        // 最大ブースター
+        ImGui::InputFloat("Max Booster", &maxBooster_, 1.0f, 10.0f, "%.1f");
+
+        if (maxBooster_ < 1.0f) {
+            maxBooster_ = 1.0f;
+        }
+        if (currentBooster_ > maxBooster_) {
+            currentBooster_ = maxBooster_;
+        }
+        if (currentBooster_ < 0.0f) {
+            currentBooster_ = 0.0f;
+        }
+        // 消費速度
+        ImGui::InputFloat("Consume Rate", &boosterConsumeRate_, 1.0f, 5.0f, "%.1f");
+
+        if (boosterConsumeRate_ < 0.0f) {
+            boosterConsumeRate_ = 0.0f;
+        }
+
+        // 回復速度
+        ImGui::InputFloat("Recover Rate", &boosterRecoverRate_, 1.0f, 5.0f, "%.1f");
+
+        if (boosterRecoverRate_ < 0.0f) {
+            boosterRecoverRate_ = 0.0f;
+        }
+
+        ImGui::Spacing();
+
+        // 現在のブースター残量
+        ImGui::Text("Booster Gauge");
+
+        float boosterRate = currentBooster_ / maxBooster_;
+        char boosterText[64];
+        std::snprintf(boosterText, sizeof(boosterText), "%.1f / %.1f", currentBooster_, maxBooster_);
+
+        ImGui::ProgressBar(boosterRate, ImVec2(-1.0f, 0.0f), boosterText);
+        // 現在の出力
+        float output = GetBoosterOutput() * 100.0f;
+        ImGui::Text("Booster Output: %.1f%%", output);
+
+        // ブースター状態
+        if (isBoosting_) {
+            ImGui::TextColored(ImVec4(0.2f, 0.8f, 1.0f, 1.0f), "BOOSTING");
+        } else {
+            ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "RECOVERING");
+        }
     }
 
     ImGui::Separator();

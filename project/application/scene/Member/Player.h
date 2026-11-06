@@ -45,6 +45,11 @@ public:
 
     // 強制的に死亡状態にする
     void SetDead();
+
+    // ブースター更新
+    void UpdateBooster();
+    // ブースター出力を取得（0.0～1.0）
+    float GetBoosterOutput() const;
 private:
     // プレイヤーデータ
     PlayerData data_;
@@ -72,8 +77,19 @@ private:
     // ダッシュ位置・方向
     TuboEngine::Math::Vector3 dashStartPos_ = {};
     TuboEngine::Math::Vector3 dashDirection_ = {};
-
-
+    // =========================================
+    // ブースター設定
+    // =========================================
+    // ブースター最大値
+    float maxBooster_ = 100.0f;
+    // 現在のブースター残量
+    float currentBooster_ = 100.0f;
+    // ブースター消費速度（1秒あたり）
+    float boosterConsumeRate_ = 30.0f;
+    // ブースター回復速度（1秒あたり）
+    float boosterRecoverRate_ = 20.0f;
+    // 現在ブーストを使用しているか
+    bool isBoosting_ = false;
 
 
     // 最大HP
