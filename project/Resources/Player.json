@@ -1,6 +1,15 @@
 {
   "current": {
-    "speed": 0.17,
+    "energy": {
+      "booster": 25.0,
+      "maxenergy": 100.0,
+      "melee": 10.0,
+      "ranged": 10.0,
+      "shield": 10.0
+    },
+    "movement": {
+      "maxspeed": 1.0
+    },
     "transform": {
       "rotate": [
         0.0,
@@ -20,7 +29,16 @@
     }
   },
   "default": {
-    "speed": 0.1,
+    "energy": {
+      "booster": 25.0,
+      "maxenergy": 100.0,
+      "melee": 25.0,
+      "ranged": 25.0,
+      "shield": 25.0
+    },
+    "movement": {
+      "maxspeed": 1.0
+    },
     "transform": {
       "rotate": [
         0.0,
