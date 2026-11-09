@@ -44,7 +44,10 @@ private:
     // 戻り値はdoubleにする
     static double Round3(float value) { return std::round(static_cast<double>(value) * 1000.0) / 1000.0; }
 };
-// JSONに変換するためのマクロ(Transform)
+
+// =========================================
+// TransformのJSON変換
+// =========================================
 #define PLAYER_TRANSFORM_FIELDS(X) \
     X("scale", scale)              \
     X("rotate", rotate)            \
@@ -52,15 +55,41 @@ private:
 
 namespace TuboEngine { TUBO_JSON_DEFINE(Transform, PLAYER_TRANSFORM_FIELDS) }
 
-// ★各パラメータの項目。増やしたらここに1行足す（保存・読み込みが使う）
+// =========================================
+// エネルギー配分データのJSON変換
+// =========================================
+#define PLAYER_ENERGY_FIELDS(X) \
+    X("maxenergy", maxenergy)   \
+    X("shield", shield)         \
+    X("melee", melee)           \
+    X("ranged", ranged)         \
+    X("booster", booster)
+
+TUBO_JSON_DEFINE(PlayerEnergyData, PLAYER_ENERGY_FIELDS)
+
+// =========================================
+// 移動関連データのJSON変換
+// =========================================
+#define MOVEMENT_FIELDS(X) \
+    X("maxspeed", maxspeed)
+
+TUBO_JSON_DEFINE(MovementData, MOVEMENT_FIELDS)
+
+// =========================================
+// PlayerDataのJSON変換
+// =========================================
 #define PLAYER_DATA_FIELDS(X) \
-    X("transform", transform) \
-    X("speed", speed)
+    X("transform", transform)  \
+    X("energy", energy)        \
+    X("movement", movement)
 
 TUBO_JSON_DEFINE(PlayerData, PLAYER_DATA_FIELDS)
-// 初期値と最新値の2つを持つJSONの項目一覧
-#define PLAYER_JSON_FIELDS(X)       \
-    X("default", defaultData)       \
+
+// =========================================
+// JSON全体の変換
+// =========================================
+#define PLAYER_JSON_FIELDS(X) \
+    X("default", defaultData) \
     X("current", currentData)
 
 TUBO_JSON_DEFINE(PlayerDataJsonFormat, PLAYER_JSON_FIELDS)

@@ -86,8 +86,6 @@ bool PlayerDataJson::SaveJson() {
 JsonManager::Json PlayerDataJson::ToRoundedJson(const PlayerData& data) {
     using Json = JsonManager::Json;
     Json json;
-    // Speed
-    json["speed"] = Round3(data.speed);
 
     // Transform
     json["transform"]["scale"] = {
@@ -107,6 +105,21 @@ JsonManager::Json PlayerDataJson::ToRoundedJson(const PlayerData& data) {
         Round3(data.transform.translate.y),
         Round3(data.transform.translate.z)
     };
+    
+    // =========================================
+    // エネルギーデータ読み込み
+    // =========================================
+    json["energy"]["maxenergy"] = Round3(data.energy.maxenergy);
+    json["energy"]["shield"] = Round3(data.energy.shield);
+    json["energy"]["melee"] = Round3(data.energy.melee);
+    json["energy"]["ranged"] = Round3(data.energy.ranged);
+    json["energy"]["booster"] = Round3(data.energy.booster);
+
+    // =========================================
+    // 移動処理データ読み込み
+    // =========================================
+    json["movement"]["maxspeed"] = Round3(data.movement.maxspeed);
+
 
     return json;
 }

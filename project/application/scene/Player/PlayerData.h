@@ -2,48 +2,74 @@
 #include "Transform.h"
 
 // =========================================
+// エネルギー配分データ
+// =========================================
+struct PlayerEnergyData {
+    float maxenergy = 100.0f;  // 最大エネルギー
+    float shield = 25.0f;      // シールド
+    float melee = 25.0f;       // 近距離武器
+    float ranged = 25.0f;      // 遠距離武器
+    float booster = 25.0f;     // ブースター
+};
+
+// =========================================
+// 移動設定
+// =========================================
+struct MovementData {
+    float maxspeed = 0.1f;  // 最大移動速度
+};
+
+// =========================================
 // プレイヤ―データ
 // =========================================
 struct PlayerData {
     // Transform
     TuboEngine::Transform transform;
+	// エネルギー配分データ
+	PlayerEnergyData energy;
     // 移動速度
-    float speed;
+    MovementData movement;
 };
+
+//// =========================================
+//// 移動設定
+//// =========================================
+//struct MovementData {
+//    // =========================================
+//    // 通常移動
+//    // =========================================  
+//    float speed = 0.1f; // 通常移動速度
 //
-//enum class PlayerState {
-//    Alive,  // 生存中
-//    Dead    // 死亡中
+//    // =========================================     
+//    // ダッシュ
+//    // =========================================
+//     // ダッシュ時の最大移動距離
+//    float maxDashDistance = 5.0f;     // ダッシュ時の最大移動距離
+//    float dashSideMultiplier = 1.5f;  // 左右方向へのダッシュ距離倍率  
+//    int dashDuration = 12;            // ダッシュの継続時間（フレーム）
+//    int dashCooldown = 60;            // ダッシュ終了後の再使用待機時間（フレーム)     
+//    // =========================================
+//    // ブースター
+//    // =========================================
+//    float maxBooster = 100.0f;         // ブースターの最大残量
+//    float boosterConsumeRate = 30.0f;  // ブースターの消費量（1秒あたり）    
+//    float boosterRecoverRate = 20.0f;  // ブースターの回復量（1秒あたり）
 //};
-
-
-// =========================================
-// 移動設定
-// =========================================
-struct PlayerMovementData {
-    // 通常移動速度
-    float speed = 0.1f;
-
-    // ダッシュ
-    float maxdashdistance = 5.0f;
-    float dashSidemultiplier = 1.5f;
-    int dashduration = 12;
-    int dashcooldown = 60;
-
-    // ブースター
-    float maxBooster = 100.0f;
-    float boosterconsumerate = 30.0f;
-    float boosterrecoverrate = 20.0f;
-};
-
-// =========================================
-// HP設定
-// =========================================
-struct PlayerHPData {
-    // 最大HP
-    int maxhp = 100;
-    // 現在HP
-    int currenthp = 100;
-    // 無敵時間（フレーム）
-    int invincibleDuration = 60;
-};
+//
+//// =========================================
+//// HP設定
+//// =========================================
+//struct PlayerHPData {
+//    // 最大HP
+//    int maxhp = 100;
+//    // 現在HP
+//    int currenthp = 100;
+//    // 無敵時間（フレーム）
+//    int invincibleDuration = 60;
+//};
+//
+////
+////enum class PlayerState {
+////    Alive,  // 生存中
+////    Dead    // 死亡中
+////};
