@@ -726,17 +726,17 @@ camera_->DrawImGui();
 | 3 | **高** ✅修正済 | [SceneManager.cpp](../project/EngineCore/engine/scene/SceneManager.cpp) `Update` 先頭 | 未登録の番号に遷移すると `currentScene` が null になり、`Update` が先頭で return するので**以後 `ChangeScene` が処理されない**（Release は assert が消えるので気付きにくい） | 黒画面のまま戻れない。→ null チェックを遷移処理の後ろに移す／生成失敗時は元のシーン番号に戻す |
 | 4 | **高** ✅修正済 | [Framework.cpp](../project/EngineCore/engine/Framework/Framework.cpp) `Finalize` | `SceneManager::Finalize`（＝シーンの `Finalize`）が、`Input`・`ParticleManager`・`TextureManager`・`ModelManager`・`SrvManager` の終了**より後**に呼ばれている | シーンの Finalize でこれらに触ると、解放済みを使う or `GetInstance()` で**新しく作り直されてリーク**。→ `SceneManager::Finalize` を一番最初に移す |
 | 5 | 中 ✅修正済 | [Framework.cpp:79](../project/EngineCore/engine/Framework/Framework.cpp) / [WinApp.cpp:96](../project/EngineCore/engine/base/Common/WinApp.cpp) | マウス固定が常時 ON。Debug エディタ表示中もウィンドウ全体に閉じ込める | 2 枚目のモニタに移れない、ブレークポイントで止めたとき操作しにくい。→ 1-3 の 1 |
-| 6 | 中 🟡一部修正 | 各所の `1.0f / 60.0f` | deltaTime が固定値 | 処理落ちするとゲーム全体がスローになる。高リフレッシュレート環境で速度が変わる可能性。→ 1-3 の 0 |
+| 6 | 中 ✅修正済 | 各所の `1.0f / 60.0f` | deltaTime が固定値 | 処理落ちするとゲーム全体がスローになる。高リフレッシュレート環境で速度が変わる可能性。→ 1-3 の 0 |
 | 7 | 中 ✅修正済 | [WinApp.cpp](../project/EngineCore/engine/base/Common/WinApp.cpp) `ProcessMessage` | 1 フレームにメッセージを **1 個しか処理しない**（`if (PeekMessage…)`） | メッセージが溜まるとウィンドウのドラッグ・リサイズや入力が重くなる。→ `while` にする（`WM_QUIT` 判定は中で） |
 | 8 | 中 ✅修正済 | [Animation.cpp](../project/EngineCore/engine/graphic/Animation/Animation.cpp) `LoadAnimation` / `LoadAnimations` | 読み込み失敗を `assert(scene)` だけで確認 | Release でパスを間違えると **null 参照で落ちる**。→ Logger に出して空のアニメを返す |
 | 9 | 中 ✅修正済 | `Animator::Initialize` ＋ `AddAnimation(名前, ファイル)` | 同じ glTF を Assimp で何度もパース | モデルが増えるとシーン読み込みが遅くなる。→ キャッシュ（1-3 の 5） |
-| 10 | 中 🟡一部修正 | `"Resources/..."` の相対パス全般（Settings / Particle / Text） | 作業ディレクトリ基準 | exe を別の場所から起動すると、読み込みも保存も**黙って失敗**（設定が保存されない）。→ JsonManager で exe の場所基準に |
+| 10 | 中 ✅修正済 | `"Resources/..."` の相対パス全般（Settings / Particle / Text） | 作業ディレクトリ基準 | exe を別の場所から起動すると、読み込みも保存も**黙って失敗**（設定が保存されない）。→ JsonManager で exe の場所基準に |
 | 11 | 低 ✅修正済 | [Framework.h](../project/EngineCore/engine/Framework/Framework.h) | `ImGuiManager.h` の include が `#ifdef _DEBUG` なのに、使う側は `#ifdef USE_IMGUI` | Release で USE_IMGUI を有効にする（またはその逆の）構成を作るとコンパイルエラー。→ 条件をそろえる |
-| 12 | 低 | `ImGuiManager::Begin` のショートカット | Ctrl+Shift+P（一時停止切替）と Ctrl+Alt+P（コマ送り）は Ctrl+Shift+Alt+P で両方反応 | 一時停止が解除されつつコマ送りになる等。→ 修飾キーを厳密に判定 |
-| 13 | 低 | `Animator::DrawImGui` | `ImGui::Begin` を直接使用（`BeginPanel` ではない） | Window メニューから非表示にできない |
-| 14 | 低 | `Input::SetJoystickDeadZone` | 値を保存するだけで、どこにも使われていない | デッドゾーンを設定しても効かない（今は各シーンで自前判定） |
-| 15 | 低 | `WinApp::Finalize` | `CloseWindow`（最小化するだけ）を呼んでいて `DestroyWindow` していない。`timeBeginPeriod(1)` に対する `timeEndPeriod(1)` も無い | 終了時なので実害は小さい |
-| 16 | 低 | `ImGuiManager::Finalize` | `delete instance` が `#ifdef USE_IMGUI` の中 | ImGui 無しビルドでわずかにリーク |
+| 12 | 低 ✅修正済 | `ImGuiManager::Begin` のショートカット | Ctrl+Shift+P（一時停止切替）と Ctrl+Alt+P（コマ送り）は Ctrl+Shift+Alt+P で両方反応 | 一時停止が解除されつつコマ送りになる等。→ 修飾キーを厳密に判定 |
+| 13 | 低 ✅修正済 | `Animator::DrawImGui` | `ImGui::Begin` を直接使用（`BeginPanel` ではない） | Window メニューから非表示にできない |
+| 14 | 低 ✅修正済 | `Input::SetJoystickDeadZone` | 値を保存するだけで、どこにも使われていない | デッドゾーンを設定しても効かない（今は各シーンで自前判定） |
+| 15 | 低 ✅修正済 | `WinApp::Finalize` | `CloseWindow`（最小化するだけ）を呼んでいて `DestroyWindow` していない。`timeBeginPeriod(1)` に対する `timeEndPeriod(1)` も無い | 終了時なので実害は小さい |
+| 16 | 低 ✅修正済 | `ImGuiManager::Finalize` | `delete instance` が `#ifdef USE_IMGUI` の中 | ImGui 無しビルドでわずかにリーク |
 | 17 | 低 | `ParticleManager::GetInstance` | 関数内 static。最初の `GetInstance()` 時に JSON を読み、プログラム終了時にもデストラクタが走る | 初期化順序や終了順序が見えにくい。他のシングルトンと同じ明示的な Initialize/Finalize に寄せると安全 |
 | 18 | **高** ✅修正済 | `TextManager::LoadTextLayout` / TitleScene・OptionScene | レイアウトを読み込むとテキストが全部作り直されるのに、シーンは `GetTextByName` で取った古いポインタを使い続けていた | ImGui の TextManager パネルで Load すると**アクセス違反で落ちる**。→ `GetLayoutRevision()` が変わったらシーンが取り直す。Load ボタンは次の `UpdateAll` で読み込む |
 | 19 | **高** ✅修正済 | [EditorPanels.cpp](../project/EngineCore/engine/imgui/EditorPanels.cpp) Project ウィンドウのパンくず | パスの要素を回しているループの中で、そのパス（currentDir）自体を書き換えていた | Textures などを開いて上の `Resources` ボタンを押すと **Debug で停止（0x80000003）**。→ 押された先を覚えてループの後で移動 |
@@ -760,6 +760,16 @@ camera_->DrawImGui();
 
 - **#8 アニメーション読み込み失敗**: `assert` をやめ、Console にログを出して空のアニメーション（duration 0）を返す。
 - **#9 同じ glTF を何度もパース**: 読み込み結果をファイルごとにキャッシュ（初回 32ms → 2回目 0.15ms。human/sneakWalk.gltf で計測）。
+
+### Ver7.3 での修正内容（EngineCore `Ver7.3_Fix_BugCleanup`）
+
+- **#6 deltaTime（残り）**: `Particle.cpp`・`ParticleEmitter.cpp` は `Time::DeltaTime()`（一時停止中は 0）、`VHSEffect.cpp` は `Time::UnscaledDeltaTime()`（一時停止中もノイズが動く）に置き換え。`Particle::kDeltaTime` は削除。
+- **#10 相対パス（残り）**: 起動時、作業フォルダに `Resources` が無く exe の隣にあれば、作業フォルダを exe の場所に切り替える（`Framework::Initialize` の最初）。テクスチャ・モデル・シェーダ・音もまとめて読めるようになる。配布する時は exe の隣に `Resources` を置く。
+- **#12 ショートカット**: Ctrl+Shift+P は Alt 無し、Ctrl+Alt+P は Shift 無しの時だけ反応。
+- **#13 BeginPanel**: Animator に加えて、Object3d / AnimatorController / Sprite / DebugCamera / LineManager / SphSimulator / Input Debug のウィンドウも `BeginPanel` に変更。Hierarchy のチェックボックスや Window メニューから隠せる。
+- **#14 デッドゾーン**: `SetJoystickDeadZone` の値を `Input::Update` で反映（円形。XInput は sThumb、DirectInput は lX/lY・lRx/lRy）。既定 0 なので、設定しなければ今まで通り。
+- **#15 WinApp 終了**: `ClipCursor(nullptr)` → `DestroyWindow` → `UnregisterClass` → `timeEndPeriod(1)`。
+- **#16 ImGuiManager**: `delete instance` を `#ifdef USE_IMGUI` の外へ。
 
 ### 先に直すべきもの（1 週目の B）
 
