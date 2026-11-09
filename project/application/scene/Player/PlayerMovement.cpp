@@ -50,9 +50,11 @@ void PlayerMovement::DrawImGui(float booster) {
         float boosterPercent = booster * 100.0f;
 
         ImGui::Text("Booster Output: %.1f%%", boosterPercent);
+        // ゲージの色を変更
+        ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(80.0f / 255.0f, 210.0f / 255.0f, 120.0f / 255.0f, 1.0f));
         ImGui::ProgressBar(booster, ImVec2(-1.0f, 0.0f));
 
-        ImGui::Separator();
+        ImGui::PopStyleColor();
 
         // 最大移動速度（編集可能）
         ImGui::InputFloat("Max Speed", &movedata_.maxspeed, 0.01f, 0.1f, "%.3f");
