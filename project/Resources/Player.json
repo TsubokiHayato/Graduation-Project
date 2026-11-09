@@ -1,11 +1,11 @@
 {
   "current": {
     "energy": {
+      "beam": 25.0,
       "booster": 25.0,
+      "fight": 25.0,
       "maxenergy": 100.0,
-      "melee": 10.0,
-      "ranged": 10.0,
-      "shield": 10.0
+      "shield": 25.0
     },
     "movement": {
       "maxspeed": 1.0
@@ -30,10 +30,10 @@
   },
   "default": {
     "energy": {
+      "beam": 25.0,
       "booster": 25.0,
+      "fight": 25.0,
       "maxenergy": 100.0,
-      "melee": 25.0,
-      "ranged": 25.0,
       "shield": 25.0
     },
     "movement": {

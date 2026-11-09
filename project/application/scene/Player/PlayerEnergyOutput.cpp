@@ -30,10 +30,9 @@ void PlayerEnergyOutput::DrawImGui() {
         // =========================================
         // エネルギー合計
         // =========================================
-        float totalEnergy = energyData_.shield + energyData_.melee + energyData_.ranged + energyData_.booster;
+        float totalEnergy = energyData_.shield + energyData_.fight + energyData_.beam + energyData_.booster;
 
         ImGui::Text("Max Energy: %.1f", energyData_.maxenergy);
-
         ImGui::Text("Total Energy: %.1f / %.1f", totalEnergy, energyData_.maxenergy);
 
         // =========================================
@@ -49,7 +48,7 @@ void PlayerEnergyOutput::DrawImGui() {
             ImVec2 pos = ImGui::GetCursorScreenPos();
             float width = ImGui::GetContentRegionAvail().x;
             float height = 24.0f;
-            const float values[4] = { energyData_.shield, energyData_.melee, energyData_.ranged, energyData_.booster };
+            const float values[4] = { energyData_.shield, energyData_.fight, energyData_.beam, energyData_.booster };
 
             const ImU32 colors[4] = {
                 IM_COL32(60, 140, 255, 255),
@@ -78,8 +77,8 @@ void PlayerEnergyOutput::DrawImGui() {
         // =========================================
         ImGui::Separator();
         ImGui::TextColored(ImVec4(0.25f, 0.55f, 1.0f, 1.0f), "Shield : %.1f", energyData_.shield);
-        ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.25f, 1.0f), "Melee  : %.1f", energyData_.melee);
-        ImGui::TextColored(ImVec4(1.0f, 0.75f, 0.2f, 1.0f), "Ranged : %.1f", energyData_.ranged);
+        ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.25f, 1.0f), "Fight  : %.1f", energyData_.fight);
+        ImGui::TextColored(ImVec4(1.0f, 0.75f, 0.2f, 1.0f), "Beam : %.1f", energyData_.beam);
         ImGui::TextColored(ImVec4(0.3f, 0.85f, 0.45f, 1.0f), "Booster: %.1f", energyData_.booster);
 
         // =========================================
@@ -90,26 +89,26 @@ void PlayerEnergyOutput::DrawImGui() {
 
         // 入力前の値を保存
         float oldShield = energyData_.shield;
-        float oldMelee = energyData_.melee;
-        float oldRanged = energyData_.ranged;
+        float oldFight = energyData_.fight;
+        float oldBeam = energyData_.beam;
         float oldBooster = energyData_.booster;
 
         // 入力
         bool shieldChanged = ImGui::InputFloat("Shield", &energyData_.shield, 0.1f, 1.0f, "%.1f");
-        bool meleeChanged = ImGui::InputFloat("Melee", &energyData_.melee, 0.1f, 1.0f, "%.1f");
-        bool rangedChanged = ImGui::InputFloat("Ranged", &energyData_.ranged, 0.1f, 1.0f, "%.1f");
+        bool fightChanged = ImGui::InputFloat("Fight", &energyData_.fight, 0.1f, 1.0f, "%.1f");
+        bool beamChanged = ImGui::InputFloat("Beam", &energyData_.beam, 0.1f, 1.0f, "%.1f");
         bool boosterChanged = ImGui::InputFloat("Booster", &energyData_.booster, 0.1f, 1.0f, "%.1f");
 
         // =========================================
         // 合計値のチェック
         // =========================================
-        if (shieldChanged || meleeChanged || rangedChanged || boosterChanged) {
-            float newTotal = energyData_.shield + energyData_.melee + energyData_.ranged + energyData_.booster;
+        if (shieldChanged || fightChanged || beamChanged || boosterChanged) {
+            float newTotal = energyData_.shield + energyData_.fight + energyData_.beam + energyData_.booster;
             // 最大エネルギーを超えた場合は変更を取り消す
             if (newTotal > energyData_.maxenergy) {
                 energyData_.shield = oldShield;
-                energyData_.melee = oldMelee;
-                energyData_.ranged = oldRanged;
+                energyData_.fight = oldFight;
+                energyData_.beam = oldBeam;
                 energyData_.booster = oldBooster;
                 ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "Energy limit exceeded!");
             }

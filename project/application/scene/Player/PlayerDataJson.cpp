@@ -111,8 +111,8 @@ JsonManager::Json PlayerDataJson::ToRoundedJson(const PlayerData& data) {
     // =========================================
     json["energy"]["maxenergy"] = Round3(data.energy.maxenergy);
     json["energy"]["shield"] = Round3(data.energy.shield);
-    json["energy"]["melee"] = Round3(data.energy.melee);
-    json["energy"]["ranged"] = Round3(data.energy.ranged);
+    json["energy"]["fight"] = Round3(data.energy.fight);
+    json["energy"]["beam"] = Round3(data.energy.beam);
     json["energy"]["booster"] = Round3(data.energy.booster);
 
     // =========================================

@@ -7,8 +7,8 @@
 struct PlayerEnergyData {
     float maxenergy = 100.0f;  // 最大エネルギー
     float shield = 25.0f;      // シールド
-    float melee = 25.0f;       // 近距離武器
-    float ranged = 25.0f;      // 遠距離武器
+    float fight = 25.0f;       // 近距離武器
+    float beam = 25.0f;        // 遠距離武器
     float booster = 25.0f;     // ブースター
 };
 

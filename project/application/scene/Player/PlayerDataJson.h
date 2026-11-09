@@ -61,8 +61,8 @@ namespace TuboEngine { TUBO_JSON_DEFINE(Transform, PLAYER_TRANSFORM_FIELDS) }
 #define PLAYER_ENERGY_FIELDS(X) \
     X("maxenergy", maxenergy)   \
     X("shield", shield)         \
-    X("melee", melee)           \
-    X("ranged", ranged)         \
+    X("fight", fight)           \
+    X("beam", beam)             \
     X("booster", booster)
 
 TUBO_JSON_DEFINE(PlayerEnergyData, PLAYER_ENERGY_FIELDS)
