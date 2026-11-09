@@ -11,9 +11,6 @@ public:
     // ImGui
     void DrawImGui();
 private:
-    // エネルギー配分の正規化
-    void NormalizeEnergy();
-private:
     // プレイヤーのエネルギーデータ
     PlayerEnergyData energyData_{};
 public:
