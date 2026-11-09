@@ -107,5 +107,7 @@
     <ClInclude Include="application\audio\AudioManager.h">
       <Filter>application\audio</Filter>
     </ClInclude>
+    <ClInclude Include="EngineCore\engine\Collider\BossHitShapes.h" />
+    <ClInclude Include="EngineCore\engine\Collider\BossHitDebugDraw.h" />
   </ItemGroup>
 </Project>
