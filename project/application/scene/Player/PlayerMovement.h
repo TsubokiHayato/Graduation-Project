@@ -1,56 +1,26 @@
 #pragma once
 #include "Object3d.h"
 #include "Input.h"
+#include "PlayerData.h"
 
 // プレイヤ―の移動処理関連クラス
 class PlayerMovement {
 public:
-
-    void Initialize(TuboEngine::Object3d* object);
-
-    void Update();
-
+    // 初期化処理
+    void Initialize(TuboEngine::Object3d* object, const MovementData& movedata);
+    // 更新処理
+    void Update(float booster);
+    // ImGui
+    void DrawImGui(float booster);
     // 通常移動
-    void Move(float speed);
+    void Move(float booster);
 
-    // ダッシュ
-   // void StartDash();
-   // void UpdateDash();
+    float CalculateMoveSpeed(float booster) const;
 
-    // ブースター
-   // void UpdateBooster();
-   // float GetBoosterOutput() const;
-
-private:
-    // 
+private:   
     TuboEngine::Object3d* object_ = nullptr;
-
-    // =========================================
-    // ダッシュ設定・状態
-    // =========================================
-    float maxDashDistance_ = 5.0f;
-    float dashSideMultiplier_ = 1.5f;
-
-    int dashDuration_ = 12;
-    int dashCooldown_ = 60;
-
-    bool isDashing_ = false;
-    bool spaceWasPressed_ = false;
-
-    int dashTimer_ = 0;
-    int dashCooldownTimer_ = 0;
-
-    TuboEngine::Math::Vector3 dashStartPos_ = {};
-    TuboEngine::Math::Vector3 dashDirection_ = {};
-
-    // =========================================
-    // ブースター設定・状態
-    // =========================================
-    float maxBooster_ = 100.0f;
-    float currentBooster_ = 100.0f;
-
-    float boosterConsumeRate_ = 30.0f;
-    float boosterRecoverRate_ = 20.0f;
-
-    bool isBoosting_ = false;
+    MovementData movedata_;
+public:
+    // 移動データ取得
+    const MovementData& GetMovementData() const { return movedata_; }
 };
