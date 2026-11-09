@@ -5,18 +5,22 @@
 // エネルギー配分データ
 // =========================================
 struct PlayerEnergyData {
-    float maxenergy = 100.0f;  // 最大エネルギー
-    float shield = 25.0f;      // シールド
-    float fight = 25.0f;       // 近距離武器
-    float beam = 25.0f;        // 遠距離武器
-    float booster = 25.0f;     // ブースター
+    float maxenergy;   // 最大エネルギー
+    float shield;      // シールド
+    float fight;       // 近距離武器
+    float beam;        // 遠距離武器
+    float booster;     // ブースター
 };
 
 // =========================================
 // 移動設定
 // =========================================
 struct MovementData {
-    float maxspeed = 0.1f;  // 最大移動速度
+    float maxspeed;  // 最大移動速度
+    // ダッシュ設定
+    float maxdashdistance = 10.0f;  // 最大ダッシュ距離
+    float dashduration = 0.5f;      // ダッシュ時間
+    float dashcooldown = 2.0f;      // クールタイム
 };
 
 // =========================================
@@ -48,12 +52,7 @@ struct PlayerData {
 //    float dashSideMultiplier = 1.5f;  // 左右方向へのダッシュ距離倍率  
 //    int dashDuration = 12;            // ダッシュの継続時間（フレーム）
 //    int dashCooldown = 60;            // ダッシュ終了後の再使用待機時間（フレーム)     
-//    // =========================================
-//    // ブースター
-//    // =========================================
-//    float maxBooster = 100.0f;         // ブースターの最大残量
-//    float boosterConsumeRate = 30.0f;  // ブースターの消費量（1秒あたり）    
-//    float boosterRecoverRate = 20.0f;  // ブースターの回復量（1秒あたり）
+
 //};
 //
 //// =========================================

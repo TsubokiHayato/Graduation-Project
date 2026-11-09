@@ -119,7 +119,8 @@ JsonManager::Json PlayerDataJson::ToRoundedJson(const PlayerData& data) {
     // 移動処理データ読み込み
     // =========================================
     json["movement"]["maxspeed"] = Round3(data.movement.maxspeed);
-
-
+    json["movement"]["maxdashdistance"] = Round3(data.movement.maxdashdistance);
+    json["movement"]["dashduration"] = Round3(data.movement.dashduration);
+    json["movement"]["dashcooldown"] = Round3(data.movement.dashcooldown);
     return json;
 }

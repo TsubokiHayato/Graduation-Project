@@ -1,14 +1,17 @@
 {
   "current": {
     "energy": {
-      "beam": 25.0,
-      "booster": 25.0,
-      "fight": 25.0,
+      "beam": 10.0,
+      "booster": 50.0,
+      "fight": 10.0,
       "maxenergy": 100.0,
-      "shield": 25.0
+      "shield": 10.0
     },
     "movement": {
-      "maxspeed": 1.0
+      "dashcooldown": 1.0,
+      "dashduration": 0.05,
+      "maxdashdistance": 20.0,
+      "maxspeed": 0.5
     },
     "transform": {
       "rotate": [
@@ -37,6 +40,9 @@
       "shield": 25.0
     },
     "movement": {
+      "dashcooldown": 2.0,
+      "dashduration": 0.5,
+      "maxdashdistance": 10.0,
       "maxspeed": 1.0
     },
     "transform": {

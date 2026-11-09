@@ -71,7 +71,10 @@ TUBO_JSON_DEFINE(PlayerEnergyData, PLAYER_ENERGY_FIELDS)
 // 移動関連データのJSON変換
 // =========================================
 #define MOVEMENT_FIELDS(X) \
-    X("maxspeed", maxspeed)
+    X("maxspeed", maxspeed) \
+    X("maxdashdistance", maxdashdistance) \
+    X("dashduration", dashduration) \
+    X("dashcooldown", dashcooldown) \
 
 TUBO_JSON_DEFINE(MovementData, MOVEMENT_FIELDS)
 
