@@ -143,5 +143,7 @@
     <ClInclude Include="application\scene\Player\PlayerHP.h">
       <Filter>application\scene\Player</Filter>
     </ClInclude>
+    <ClInclude Include="EngineCore\engine\Collider\BossHitShapes.h" />
+    <ClInclude Include="EngineCore\engine\Collider\BossHitDebugDraw.h" />
   </ItemGroup>
 </Project>
