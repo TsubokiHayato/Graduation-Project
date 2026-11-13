@@ -3,6 +3,7 @@
 #include "Input.h"
 #include "TextManager.h"
 #include <cmath>
+#include "LineManager.h"
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
 #endif
@@ -31,6 +32,8 @@ void SatouScene::Initialize() {
 	axis_->Initialize("axis/axis.obj");
 	axis_->SetCamera(camera_.get());
 	axis_->SetPosition({ 0.0f, 0.0f, 0.0f });
+
+	warningRenderer_.Initialize(camera_.get());
 }
 
 // =============================================================================
@@ -40,6 +43,8 @@ void SatouScene::Update() {
 	camera_->Update();
 	debugCamera_->Update(camera_.get());
 	axis_->Update();
+	warning_.Update((1.0f / 60.0f) * warnTimeScale_);
+	warningRenderer_.Update(warning_);
 
 	TextManager::GetInstance()->UpdateAll();
 }
@@ -62,7 +67,7 @@ void SatouScene::Object3DDraw() {
 	// --- 形状データを作り、判定する（本番のGP-16〜24でもこの形で使う想定） ---
 	BossHit::Circle circle{ boss, circleRadius_ };
 	BossHit::Beam beam{ boss, dirOf(beamAngle_), beamLength_, beamWidth_ };
-	BossHit::Fan fan{ boss, dirOf(bossYaw_), fanRadius_, fanAngle_ * kDegToRad };
+	BossHit::Fan fan{ boss, dirOf(bossYaw_), fanRadius_,BossHit::WarningRenderer::FanPresetRad(warnFanIdx_) };
 	BossHit::Bullet bullet{ {bulletX_, 0.0f, bulletZ_}, bulletRadius_ };
 
 	hitCircle_ = BossHit::HitCircle(circle, player, playerRadius_);
@@ -79,6 +84,23 @@ void SatouScene::Object3DDraw() {
 	}
 	if (showFan_) DrawFan(fan, Color(hitFan_));
 	if (showBullet_) DrawBullet(bullet, Color(hitBullet_));
+
+	if (warnStart_) {
+		warnStart_ = false;
+		BossHit::Shape s = (warnType_ == 0) ? BossHit::Shape{ circle }
+			: (warnType_ == 1) ? BossHit::Shape{ beam }
+		: BossHit::Shape{ fan };
+		warning_.Start(s, warnTelegraph_, warnHitSec_);
+	}
+
+	if (warning_.IsActive()) {
+		bool hitPhase = warning_.IsHitActive();
+		DrawShape(warning_.GetShape(), { 1.0f, 0.4f, 0.4f, 1.0f });                               // 外枠
+		DrawShape(warning_.GetFillShape(), hitPhase ? Vec4{ 1, 1, 1, 1 } : Vec4{ 1, 0, 0, 1 });     // 広がる塗り
+		if (hitPhase) warnHitResult_ = BossHit::Hit(warning_.GetShape(), player, playerRadius_);
+	}
+
+	warningRenderer_.Draw();
 
 	// 自機（緑の球）とボス位置（黄）
 	TuboEngine::LineManager::GetInstance()->DrawSphere(player, playerRadius_, { 0.0f, 1.0f, 0.0f, 1.0f }, 16);
@@ -115,21 +137,24 @@ void SatouScene::ImGuiDraw() {
 	if (ImGui::CollapsingHeader("Circle", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::Checkbox("show##c", &showCircle_);
 		ImGui::SliderFloat("radius##c", &circleRadius_, 0.5f, 15.0f);
-		hitText("circle", hitCircle_);
+		//hitText("circle", hitCircle_);
 	}
 	if (ImGui::CollapsingHeader("Beam", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::Checkbox("show##b", &showBeam_);
 		ImGui::SliderFloat("angle(deg)##b", &beamAngle_, -180.0f, 180.0f);
 		ImGui::SliderFloat("length##b", &beamLength_, 1.0f, 20.0f);
 		ImGui::SliderFloat("width##b", &beamWidth_, 0.2f, 6.0f);
-		hitText("beam", hitBeam_);
+		//hitText("beam", hitBeam_);
 	}
 	if (ImGui::CollapsingHeader("Fan", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::Checkbox("show##f", &showFan_);
 		ImGui::SliderFloat("boss yaw(deg)##f", &bossYaw_, -180.0f, 180.0f);
 		ImGui::SliderFloat("radius##f", &fanRadius_, 0.5f, 15.0f);
-		ImGui::SliderFloat("angle(deg)##f", &fanAngle_, 5.0f, 350.0f);
-		hitText("fan", hitFan_);
+		static const char* kFanLabels[] = { "30", "45", "60", "90", "120", "180", "270" };
+		static_assert(IM_ARRAYSIZE(kFanLabels) == BossHit::WarningRenderer::kFanPresetCount, "プリセット数とラベル数を揃える");
+		ImGui::Combo("angle(deg)##f", &warnFanIdx_, kFanLabels, IM_ARRAYSIZE(kFanLabels));
+
+		//hitText("fan", hitFan_);
 	}
 	if (ImGui::CollapsingHeader("Bullet", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::Checkbox("show##u", &showBullet_);
@@ -138,7 +163,18 @@ void SatouScene::ImGuiDraw() {
 		ImGui::SliderFloat("radius##u", &bulletRadius_, 0.1f, 3.0f);
 		hitText("bullet", hitBullet_);
 	}
-
+	if (ImGui::CollapsingHeader("Warning", ImGuiTreeNodeFlags_DefaultOpen)) {
+		ImGui::Combo("shape", &warnType_, "Circle\0Beam\0Fan\0");
+		ImGui::SliderFloat("telegraph(s)", &warnTelegraph_, 0.2f, 5.0f);
+		ImGui::SliderFloat("hit window(s)", &warnHitSec_, 0.02f, 0.5f);
+		ImGui::SliderFloat("time scale", &warnTimeScale_, 0.1f, 2.0f);
+		if (ImGui::Button("Start")) warnStart_ = true;
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel")) warning_.Cancel();
+		ImGui::Text("progress: %.2f", warning_.GetProgress());
+		ImGui::TextColored(warnHitResult_ ? ImVec4(1, 0.2f, 0.2f, 1) : ImVec4(0.7f, 0.7f, 0.7f, 1),
+			"last hit: %s", warnHitResult_ ? "HIT" : "MISS");
+	}
 	ImGui::End();
 #endif
 }

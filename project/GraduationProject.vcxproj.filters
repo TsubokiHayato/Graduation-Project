@@ -65,6 +65,10 @@
     <ClCompile Include="application\audio\AudioManager.cpp">
       <Filter>application\audio</Filter>
     </ClCompile>
+    <ClCompile Include="BossHitDebugDraw.cpp" />
+    <ClCompile Include="BossHitShapes.cpp" />
+    <ClCompile Include="BossWarning.cpp" />
+    <ClCompile Include="BossWarningRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FadeScreen.h" />
@@ -109,5 +113,7 @@
     </ClInclude>
     <ClInclude Include="EngineCore\engine\Collider\BossHitShapes.h" />
     <ClInclude Include="EngineCore\engine\Collider\BossHitDebugDraw.h" />
+    <ClInclude Include="BossWarning.h" />
+    <ClInclude Include="BossWarningRenderer.h" />
   </ItemGroup>
 </Project>

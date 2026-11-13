@@ -118,6 +118,10 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BossHitDebugDraw.cpp" />
+    <ClCompile Include="BossHitShapes.cpp" />
+    <ClCompile Include="BossWarning.cpp" />
+    <ClCompile Include="BossWarningRenderer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="FadeScreen.cpp" />
     <ClCompile Include="application\Order.cpp" />
@@ -134,6 +138,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="application\audio\AudioManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BossWarning.h" />
+    <ClInclude Include="BossWarningRenderer.h" />
     <ClInclude Include="EngineCore\engine\Collider\BossHitDebugDraw.h" />
     <ClInclude Include="EngineCore\engine\Collider\BossHitShapes.h" />
     <ClInclude Include="FadeScreen.h" />
