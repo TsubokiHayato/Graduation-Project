@@ -13,6 +13,7 @@ using namespace TuboEngine;
 namespace {
 constexpr float kPi = std::numbers::pi_v<float>;
 
+//色の線形補間
 Math::Vector4 LerpColor(const Math::Vector4& a, const Math::Vector4& b, float t) {
 	return {a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, a.w + (b.w - a.w) * t};
 }
@@ -22,9 +23,12 @@ const Math::Vector4 kColorGlow = {1.0f, 0.55f, 0.1f, 1.0f};   // 予兆の発光
 const Math::Vector4 kColorBlast = {1.0f, 1.0f, 0.85f, 1.0f};  // 爆発の瞬間
 const Math::Vector4 kColorStun = {0.35f, 0.35f, 0.45f, 1.0f}; // 硬直中（出力が落ちた見た目）
 const Math::Vector4 kColorWarning = {1.0f, 0.1f, 0.1f, 1.0f}; // 赤い警告表示
+
 } // namespace
 
+//パラメータの初期化
 BossAttackOmniBomb::BossAttackOmniBomb() {
+
 	// 共通パラメータの初期値（硬直は「長い」）
 	common_.telegraphTime = 2.0f;
 	common_.damage = 60.0f;
