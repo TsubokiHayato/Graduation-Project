@@ -8,7 +8,7 @@
       "shield": 10.0
     },
     "hp": {
-      "currenthp": 80.0,
+      "currenthp": 100.0,
       "invincibleduration": 0.1,
       "maxhp": 100.0
     },
