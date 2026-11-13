@@ -89,6 +89,10 @@
     <ClCompile Include="application\Boss\BossAttackLockOnBeam.cpp" />
     <ClCompile Include="application\Boss\BossAttackBarrage.cpp" />
     <ClCompile Include="application\Boss\BossAttackSweep.cpp" />
+    <ClCompile Include="BossHitDebugDraw.cpp" />
+    <ClCompile Include="BossHitShapes.cpp" />
+    <ClCompile Include="BossWarning.cpp" />
+    <ClCompile Include="BossWarningRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FadeScreen.h" />
@@ -157,5 +161,7 @@
     <ClInclude Include="application\Boss\BossAttackLockOnBeam.h" />
     <ClInclude Include="application\Boss\BossAttackBarrage.h" />
     <ClInclude Include="application\Boss\BossAttackSweep.h" />
+    <ClInclude Include="BossWarning.h" />
+    <ClInclude Include="BossWarningRenderer.h" />
   </ItemGroup>
 </Project>
