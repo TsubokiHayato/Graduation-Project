@@ -237,6 +237,19 @@ public:
 | ショートカットの整理 | Ctrl+Shift+P と Ctrl+Alt+P は同時押しで両方反応する（[3 章 #12](#3-バグになりそうな箇所)） |
 | Console の改良 | ログに種類（Info/Warning/Error）を持たせる。今は文字列に「error」等が含まれるかで判定 |
 
+
+### 1-4. 追加の予定表（エディタ改善・2026-10-26〜）
+
+| # | 項目 | 状態 | 目安 | 予定日 |
+|---|---|---|---|---|
+| 8 | **Project ウィンドウのパンくずで落ちる不具合**（Textures を開いて上の `Resources` を押すとエラー） | ✅ 修正済 | 0.5 日 | 10/26（月） |
+| 9 | **オブジェクトのテクスチャを変える**（Inspector にドロップ / Project で選択中の画像を使う） | ✅ | 1 日 | 10/26（月）〜 10/27（火） |
+| 10 | **実行中の変更をオブジェクトごとに保存**（任意。保存しなければ次回は元に戻る） | ✅ | 1.5 日 | 10/27（火）〜 10/28（水） |
+| 11 | **Hierarchy のフォルダ分け**（作成・名前変更・削除・ドラッグで出し入れ） | ✅ | 1.5 日 | 10/29（木）〜 10/30（金） |
+| — | 予備（触って確認・直し） | — | 1 日 | 11/2（月） |
+
+> 実装は EngineCore ブランチ `Ver7.1_Feature_EditorImprove` / 親リポジトリ ブランチ `Ver1.2_Feature_EditorImprove`。使い方は [2-11](#2-11-ver71-で追加したものエディタ改善)。
+
 ---
 
 ## 2. 実装済み機能の仕組みと使い方
@@ -581,6 +594,16 @@ void MyScene::ImGuiDraw() {
 - 補間はキーごとに `Easing.h` の 31 種類から選べる（「そのキー → 次のキー」の動き方。選択中のキーのカーブが表示される）。
 - 打つ対象は 位置 / 回転 / 拡縮 / 色 のチェックで選ぶ。
 
+**ボーンを動かす（Animator のみ）**:
+1. Hierarchy で Animator のオブジェクト（例: human）を選び、Inspector の **Bones** を開く
+2. 一覧からボーンを選ぶ（Game 画面のボーンの位置に黄色い印が出る）→ Rotation (deg) / Position / Scale を変える
+   - 変えたボーンは **(上書き)** になり、アニメーションより優先される（他のボーンはアニメーションのまま）
+   - 「このボーンをアニメーションに戻す」「全ボーンを戻す」で解除。Animation の Pause で止めるとポーズを付けやすい
+3. Timeline の **「ボーン: ○○」** にチェックを入れて「キーを打つ (I)」→ そのボーンの位置・回転・拡縮のキーが入る
+   - **「ポーズ全体のキー」** で、上書き中のボーン全部にキーを打てる
+   - トラック名は `bone:<ボーン名>/rotation` など。回転は球面補間（Slerp）で補間される
+4. ゲームでは `player_.Apply(animator_.get())` でボーンも動く（キーを打ったボーンだけアニメーションより優先）
+
 **ゲームで再生する**:
 
 ```cpp
@@ -605,6 +628,93 @@ if (player_.IsFinished()) { ... }
 
 ---
 
+### 2-11. Ver7.1 で追加したもの（エディタ改善）
+
+#### オブジェクトのテクスチャを変える
+
+- Hierarchy でオブジェクトを選び、Inspector の **Texture** 欄で変える。
+  - Project ウィンドウから画像を **「ここに画像をドロップ」にドラッグ**
+  - または Project ウィンドウで画像を**クリックで選んで**「Project で選択中の画像を使う」
+  - 「元に戻す」でモデル本来のテクスチャへ（Object3d / Animator）
+- 読み込めない画像は差し替えない（赤字で表示。描画で落ちない）。
+- コードからは: `obj->SetTexture("player_red.png")` / `obj->ClearTexture()` / `obj->GetTexture()`（Resources/Textures からのパス）。
+  **このオブジェクトだけ**変わる（同じモデルを使う他のオブジェクトはそのまま）。Sprite は従来どおり `SetTexture`。
+
+#### 実行中の変更を保存する（任意）
+
+- 実行中に Inspector / Gizmo で動かすと、Hierarchy の名前に **`*`** が付く（「保存しないと次回は戻る」の印）。
+- 残したいものだけ保存する:
+  - Inspector の **「この状態を保存」** / Hierarchy で右クリック →「この状態を保存」
+  - Hierarchy 上の **「変更をすべて保存 (n)」** で `*` の付いた物をまとめて
+  - 「変更を元に戻す」で、シーン開始時（または最後に保存した時）の値へ。「保存を削除」で保存を消す
+- 保存先は `Resources/SceneData/<シーン名>.json`（位置・回転・拡縮・色・テクスチャ）。
+- **シーン側で1行呼ぶと、次回の起動から反映される（Release でも）**:
+
+```cpp
+#include "SceneSaveData.h"
+// Initialize で、オブジェクトを作った後に（名前は Editor::Inspect と同じ）
+TuboEngine::SceneSaveData::Apply("player", player_.get());   // Object3d / Animator / Sprite / TextObject
+```
+
+- Apply を呼んでいないシーンで保存すると、Inspector に「まだ保存値を読み込んでいません」と出る。
+- TsubokiScene は human / axis / ground で Apply 済み。
+
+#### Hierarchy のフォルダ分け
+
+- **「+ フォルダ」** で作成。フォルダを右クリック →「この中に新しいフォルダ」「名前を変更」「削除（中身は1つ上へ）」。
+- オブジェクトや**タブ（デバッグウィンドウ: Human / Scene など）**を**フォルダにドラッグ**で入れる。**シーン名（一番上）にドラッグ**でフォルダから出す。フォルダごとドラッグして別のフォルダの中へ移すこともできる。
+- ドラッグしなくても、**右クリック →「フォルダへ移動 ▸」/「フォルダから出す」**でもできる。
+- フォルダ構成は変えた時点で `Resources/SceneData/<シーン名>.json` に保存される（オブジェクトの値の保存とは別。次回もそのまま）。
+- エディタ上の整理だけで、ゲームの動きには影響しない。
+
+---
+
+### 2-12. UniversalCamera（追従カメラ）— `engine/camera/UniversalCamera.h`
+
+ターゲットを追従するカメラ。**視点切り替え（真後ろ / 頭上後ろ斜め / 見下ろし）・ロックオン・シェイク・FOV・キーフレーム**をまとめて持つ。
+
+```cpp
+#include "UniversalCamera.h"
+std::unique_ptr<TuboEngine::UniversalCamera> camera_;
+
+// Initialize
+camera_ = std::make_unique<TuboEngine::UniversalCamera>();
+camera_->LoadPresets("Resources/Camera/presets.json", false);       // ImGui で調整して Save したもの（無ければ初期値）
+camera_->AddTarget("player", [this] { return player_->GetPosition(); }, [this] { return player_->GetRotation().y; });
+camera_->AddTarget("boss", [this] { return boss_->GetPosition(); }); // 向きが要らなければ省略
+camera_->SetTarget("player", 0.0f);                                  // 0 = 切り替えアニメ無し
+player_->SetCamera(camera_->GetCamera());                            // オブジェクトにはこれを渡す
+
+// Update（ターゲットを動かした「後」、オブジェクトの Update の「前」）
+camera_->Update(TuboEngine::Time::DeltaTime());
+
+// GetMainCamera
+return camera_->GetCamera();
+
+// ImGuiDraw（操作画面。Hierarchy にも [Cam] Camera が出る）
+camera_->DrawImGui();
+```
+
+| やりたいこと | 書き方 |
+|---|---|
+| 追従対象を変える（イージング付き） | `camera_->SetTarget("boss", 0.6f, Easing::Type::InOutCubic)` |
+| 視点を変える | `camera_->SetViewMode(UniversalCamera::ViewMode::TopDown)`（Behind / BehindDiagonal / TopDown） |
+| ロックオン | `camera_->LockOn("boss")` / `camera_->ClearLockOn()` — 自分の後ろから相手の方を向き、注視点を相手側へ寄せる |
+| 揺らす | `camera_->Shake(0.6f)`（0〜1。足すほど強く、時間で収まる） |
+| 一瞬だけ画角を広げる | `camera_->KickFov(8.0f, 0.35f)`（ダッシュ・被弾） |
+| 速度などで画角を上乗せ | `camera_->SetFovOffset(speed * 0.5f)`（毎フレーム呼んでよい。なめらかに追う） |
+| カットシーン | `camera_->PlayClip(&clip, 0.5f, 0.5f)` — Timeline で作った `camera:eye / camera:lookAt / camera:fov` を再生し、終わると追従へ戻る |
+
+- 切り替えは「切り替えた瞬間のカメラ」から「毎フレーム計算し直した目標」へイージングするので、ターゲットが動いていても、途中で切り替え直しても跳ばない。
+- 回転は「eye → lookAt の向き」から決める（オイラー角どうしを補間しない）。
+- 視点ごとの設定（距離・見下ろす角度・横にずらす角度・注視点の高さ・肩越し・先読み・向きに合わせるか・追従の速さ・画角）は ImGui で変えて `Save` → `Resources/Camera/presets.json`。
+- **カメラのキーフレームの作り方**: Hierarchy の `[Cam] Camera` を選ぶ → Inspector の Eye / LookAt / FOV で位置を決める（手動になる）→ Timeline で「カメラ位置 / 注視点 / 画角」にキー → 時間を変えて繰り返し → Save。「追従に戻す」で追従へ。
+- 使用例: TsubokiScene（human を追従、**Q で axis にロックオン**）。
+
+> 修正: `Camera` のコンストラクタで `Transform` の並び（scale, rotate, translate）を取り違えていて、**scale が 0** になっていた。`setScale({1,1,1})` を呼ばないと行列が NaN になり画面が真っ黒になる。コンストラクタを直したので、今後は呼ばなくても正しく描ける。
+
+---
+
 ## 3. バグになりそうな箇所
 
 重要度: **高** = 実際に値が壊れる・落ちる可能性が高い / **中** = 条件次第で起きる / **低** = 今は問題ないが将来ハマる
@@ -616,19 +726,22 @@ if (player_.IsFinished()) { ... }
 | 3 | **高** ✅修正済 | [SceneManager.cpp](../project/EngineCore/engine/scene/SceneManager.cpp) `Update` 先頭 | 未登録の番号に遷移すると `currentScene` が null になり、`Update` が先頭で return するので**以後 `ChangeScene` が処理されない**（Release は assert が消えるので気付きにくい） | 黒画面のまま戻れない。→ null チェックを遷移処理の後ろに移す／生成失敗時は元のシーン番号に戻す |
 | 4 | **高** ✅修正済 | [Framework.cpp](../project/EngineCore/engine/Framework/Framework.cpp) `Finalize` | `SceneManager::Finalize`（＝シーンの `Finalize`）が、`Input`・`ParticleManager`・`TextureManager`・`ModelManager`・`SrvManager` の終了**より後**に呼ばれている | シーンの Finalize でこれらに触ると、解放済みを使う or `GetInstance()` で**新しく作り直されてリーク**。→ `SceneManager::Finalize` を一番最初に移す |
 | 5 | 中 ✅修正済 | [Framework.cpp:79](../project/EngineCore/engine/Framework/Framework.cpp) / [WinApp.cpp:96](../project/EngineCore/engine/base/Common/WinApp.cpp) | マウス固定が常時 ON。Debug エディタ表示中もウィンドウ全体に閉じ込める | 2 枚目のモニタに移れない、ブレークポイントで止めたとき操作しにくい。→ 1-3 の 1 |
-| 6 | 中 🟡一部修正 | 各所の `1.0f / 60.0f` | deltaTime が固定値 | 処理落ちするとゲーム全体がスローになる。高リフレッシュレート環境で速度が変わる可能性。→ 1-3 の 0 |
+| 6 | 中 ✅修正済 | 各所の `1.0f / 60.0f` | deltaTime が固定値 | 処理落ちするとゲーム全体がスローになる。高リフレッシュレート環境で速度が変わる可能性。→ 1-3 の 0 |
 | 7 | 中 ✅修正済 | [WinApp.cpp](../project/EngineCore/engine/base/Common/WinApp.cpp) `ProcessMessage` | 1 フレームにメッセージを **1 個しか処理しない**（`if (PeekMessage…)`） | メッセージが溜まるとウィンドウのドラッグ・リサイズや入力が重くなる。→ `while` にする（`WM_QUIT` 判定は中で） |
 | 8 | 中 ✅修正済 | [Animation.cpp](../project/EngineCore/engine/graphic/Animation/Animation.cpp) `LoadAnimation` / `LoadAnimations` | 読み込み失敗を `assert(scene)` だけで確認 | Release でパスを間違えると **null 参照で落ちる**。→ Logger に出して空のアニメを返す |
 | 9 | 中 ✅修正済 | `Animator::Initialize` ＋ `AddAnimation(名前, ファイル)` | 同じ glTF を Assimp で何度もパース | モデルが増えるとシーン読み込みが遅くなる。→ キャッシュ（1-3 の 5） |
-| 10 | 中 🟡一部修正 | `"Resources/..."` の相対パス全般（Settings / Particle / Text） | 作業ディレクトリ基準 | exe を別の場所から起動すると、読み込みも保存も**黙って失敗**（設定が保存されない）。→ JsonManager で exe の場所基準に |
+| 10 | 中 ✅修正済 | `"Resources/..."` の相対パス全般（Settings / Particle / Text） | 作業ディレクトリ基準 | exe を別の場所から起動すると、読み込みも保存も**黙って失敗**（設定が保存されない）。→ JsonManager で exe の場所基準に |
 | 11 | 低 ✅修正済 | [Framework.h](../project/EngineCore/engine/Framework/Framework.h) | `ImGuiManager.h` の include が `#ifdef _DEBUG` なのに、使う側は `#ifdef USE_IMGUI` | Release で USE_IMGUI を有効にする（またはその逆の）構成を作るとコンパイルエラー。→ 条件をそろえる |
-| 12 | 低 | `ImGuiManager::Begin` のショートカット | Ctrl+Shift+P（一時停止切替）と Ctrl+Alt+P（コマ送り）は Ctrl+Shift+Alt+P で両方反応 | 一時停止が解除されつつコマ送りになる等。→ 修飾キーを厳密に判定 |
-| 13 | 低 | `Animator::DrawImGui` | `ImGui::Begin` を直接使用（`BeginPanel` ではない） | Window メニューから非表示にできない |
-| 14 | 低 | `Input::SetJoystickDeadZone` | 値を保存するだけで、どこにも使われていない | デッドゾーンを設定しても効かない（今は各シーンで自前判定） |
-| 15 | 低 | `WinApp::Finalize` | `CloseWindow`（最小化するだけ）を呼んでいて `DestroyWindow` していない。`timeBeginPeriod(1)` に対する `timeEndPeriod(1)` も無い | 終了時なので実害は小さい |
-| 16 | 低 | `ImGuiManager::Finalize` | `delete instance` が `#ifdef USE_IMGUI` の中 | ImGui 無しビルドでわずかにリーク |
+| 12 | 低 ✅修正済 | `ImGuiManager::Begin` のショートカット | Ctrl+Shift+P（一時停止切替）と Ctrl+Alt+P（コマ送り）は Ctrl+Shift+Alt+P で両方反応 | 一時停止が解除されつつコマ送りになる等。→ 修飾キーを厳密に判定 |
+| 13 | 低 ✅修正済 | `Animator::DrawImGui` | `ImGui::Begin` を直接使用（`BeginPanel` ではない） | Window メニューから非表示にできない |
+| 14 | 低 ✅修正済 | `Input::SetJoystickDeadZone` | 値を保存するだけで、どこにも使われていない | デッドゾーンを設定しても効かない（今は各シーンで自前判定） |
+| 15 | 低 ✅修正済 | `WinApp::Finalize` | `CloseWindow`（最小化するだけ）を呼んでいて `DestroyWindow` していない。`timeBeginPeriod(1)` に対する `timeEndPeriod(1)` も無い | 終了時なので実害は小さい |
+| 16 | 低 ✅修正済 | `ImGuiManager::Finalize` | `delete instance` が `#ifdef USE_IMGUI` の中 | ImGui 無しビルドでわずかにリーク |
 | 17 | 低 | `ParticleManager::GetInstance` | 関数内 static。最初の `GetInstance()` 時に JSON を読み、プログラム終了時にもデストラクタが走る | 初期化順序や終了順序が見えにくい。他のシングルトンと同じ明示的な Initialize/Finalize に寄せると安全 |
 | 18 | **高** ✅修正済 | `TextManager::LoadTextLayout` / TitleScene・OptionScene | レイアウトを読み込むとテキストが全部作り直されるのに、シーンは `GetTextByName` で取った古いポインタを使い続けていた | ImGui の TextManager パネルで Load すると**アクセス違反で落ちる**。→ `GetLayoutRevision()` が変わったらシーンが取り直す。Load ボタンは次の `UpdateAll` で読み込む |
+| 19 | **高** ✅修正済 | [EditorPanels.cpp](../project/EngineCore/engine/imgui/EditorPanels.cpp) Project ウィンドウのパンくず | パスの要素を回しているループの中で、そのパス（currentDir）自体を書き換えていた | Textures などを開いて上の `Resources` ボタンを押すと **Debug で停止（0x80000003）**。→ 押された先を覚えてループの後で移動 |
+| 20 | **高** ✅修正済 | [EditorObjects.cpp](../project/EngineCore/engine/imgui/EditorObjects.cpp) / ImGuiManager.cpp の Hierarchy | 項目を**押した瞬間**に Inspector（タブはそのウィンドウ）へフォーカスを移していたため、ImGui がつかんだ状態を解除してしまう | オブジェクト・タブを**フォルダへドラッグできない**。→ 押した時は選択だけ、前面に出すのはドラッグせずに離した時。タブもフォルダに入れられるようにした |
+| 21 | **高** ✅修正済 | [Camera.cpp](../project/EngineCore/engine/camera/Camera.cpp) コンストラクタ | `Transform` は {scale, rotate, translate} の並びなのに {0, 0, 1} の順で初期化していて、scale が 0・translate が (1,1,1) になっていた | `setScale` を呼ばずに使うとビュー行列が NaN になり**画面が真っ黒**。→ 並びを直した |
 
 ### Ver7.0 での修正内容
 
@@ -647,6 +760,16 @@ if (player_.IsFinished()) { ... }
 
 - **#8 アニメーション読み込み失敗**: `assert` をやめ、Console にログを出して空のアニメーション（duration 0）を返す。
 - **#9 同じ glTF を何度もパース**: 読み込み結果をファイルごとにキャッシュ（初回 32ms → 2回目 0.15ms。human/sneakWalk.gltf で計測）。
+
+### Ver7.3 での修正内容（EngineCore `Ver7.3_Fix_BugCleanup`）
+
+- **#6 deltaTime（残り）**: `Particle.cpp`・`ParticleEmitter.cpp` は `Time::DeltaTime()`（一時停止中は 0）、`VHSEffect.cpp` は `Time::UnscaledDeltaTime()`（一時停止中もノイズが動く）に置き換え。`Particle::kDeltaTime` は削除。
+- **#10 相対パス（残り）**: 起動時、作業フォルダに `Resources` が無く exe の隣にあれば、作業フォルダを exe の場所に切り替える（`Framework::Initialize` の最初）。テクスチャ・モデル・シェーダ・音もまとめて読めるようになる。配布する時は exe の隣に `Resources` を置く。
+- **#12 ショートカット**: Ctrl+Shift+P は Alt 無し、Ctrl+Alt+P は Shift 無しの時だけ反応。
+- **#13 BeginPanel**: Animator に加えて、Object3d / AnimatorController / Sprite / DebugCamera / LineManager / SphSimulator / Input Debug のウィンドウも `BeginPanel` に変更。Hierarchy のチェックボックスや Window メニューから隠せる。
+- **#14 デッドゾーン**: `SetJoystickDeadZone` の値を `Input::Update` で反映（円形。XInput は sThumb、DirectInput は lX/lY・lRx/lRy）。既定 0 なので、設定しなければ今まで通り。
+- **#15 WinApp 終了**: `ClipCursor(nullptr)` → `DestroyWindow` → `UnregisterClass` → `timeEndPeriod(1)`。
+- **#16 ImGuiManager**: `delete instance` を `#ifdef USE_IMGUI` の外へ。
 
 ### 先に直すべきもの（1 週目の B）
 

@@ -1,6 +1,7 @@
 #pragma once
 #include "IScene.h"
 #include "Camera.h"
+#include "UniversalCamera.h"
 #include "Object3d.h"
 #include "Animator.h"
 #include "AnimatorController.h"
@@ -15,7 +16,7 @@ public:
 	void SpriteDraw() override;
 	void ImGuiDraw() override;
 	void ParticleDraw() override;
-	TuboEngine::Camera* GetMainCamera() const override { return camera_.get(); }
+	TuboEngine::Camera* GetMainCamera() const override { return camera_->GetCamera(); }
 
 private:
 	/// <summary>
@@ -24,17 +25,13 @@ private:
 	void UpdateCharacter();
 
 	/// <summary>
-	/// カメラをキャラクターに追従させる
-	/// </summary>
-	void UpdateCamera();
-
-	/// <summary>
 	/// 歩きアニメーションから待機ポーズ（1フレームのアニメーション）を作る
 	/// </summary>
 	TuboEngine::Animation CreateIdlePose() const;
 
 private:
-	std::unique_ptr<TuboEngine::Camera> camera_;
+	// 追従カメラ（真後ろ / 後ろ斜め / 見下ろし、ロックオン、シェイク、FOV、キーフレーム）
+	std::unique_ptr<TuboEngine::UniversalCamera> camera_;
 
 	std::unique_ptr<TuboEngine::Object3d> axis_;
 	std::unique_ptr<TuboEngine::Object3d> ground_;
@@ -54,6 +51,4 @@ private:
 	bool showHandMarker_ = false; // 右手の位置に球を表示する（ボーン位置取得の確認用）
 
 	// カメラ（キャラクターからの相対位置）
-	TuboEngine::Math::Vector3 cameraOffset_ = {0.0f, 4.0f, -9.0f};
-	float cameraPitch_ = 0.3f;
 };

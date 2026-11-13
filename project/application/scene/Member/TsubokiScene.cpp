@@ -5,6 +5,7 @@
 #include "TextManager.h"
 #include "LineManager.h"
 #include "EditorObjects.h"
+#include "SceneSaveData.h"
 #include "GameTime.h"
 #include <algorithm>
 #include <cmath>
@@ -40,25 +41,22 @@ float LowerFootHeight(const Skeleton& skeleton) {
 // =============================================================================
 void TsubokiScene::Initialize() {
 	// ※ Camera はグローバルにも前方宣言があるため TuboEngine:: を明示する。
-	camera_ = std::make_unique<TuboEngine::Camera>();
-	camera_->SetTranslate(cameraOffset_);
-	camera_->setRotation({cameraPitch_, 0.0f, 0.0f});
-	camera_->setScale({1.0f, 1.0f, 1.0f});
-	camera_->Update();
+	camera_ = std::make_unique<TuboEngine::UniversalCamera>();
+	camera_->LoadPresets("Resources/Camera/presets.json", /*logIfMissing*/ false); // ImGui で調整して Save したもの（無ければ初期値）
 
 	axis_ = std::make_unique<Object3d>();
 	axis_->Initialize("axis/axis.obj");
-	axis_->SetCamera(camera_.get());
+	axis_->SetCamera(camera_->GetCamera());
 	axis_->SetPosition({0.0f, 0.0f, 0.0f});
 
 	ground_ = std::make_unique<Object3d>();
 	ground_->Initialize("tile/tile30x30.obj");
-	ground_->SetCamera(camera_.get());
+	ground_->SetCamera(camera_->GetCamera());
 
 	// 人型キャラクター。walk.gltf と sneakWalk.gltf はアニメーション名が同じなので名前を付けて登録する
 	human_ = std::make_unique<Animator>();
 	human_->Initialize("human/walk.gltf");
-	human_->SetCamera(camera_.get());
+	human_->SetCamera(camera_->GetCamera());
 	human_->SetScale({modelScale_, modelScale_, modelScale_});
 	human_->AddAnimation("Walk", "human/walk.gltf");
 	human_->AddAnimation("SneakWalk", "human/sneakWalk.gltf");
@@ -73,6 +71,18 @@ void TsubokiScene::Initialize() {
 	animController_.AddTransition("*", "SneakWalk", {{"moving", Op::True}, {"sneak", Op::True}});
 	animController_.AddTransition("*", "Walk", {{"moving", Op::True}, {"sneak", Op::False}});
 	animController_.SetDefaultState("Idle");
+
+	// エディタで保存した位置・テクスチャなどを反映する（保存が無ければ何もしない。名前は Editor::Inspect と同じ）
+	SceneSaveData::Apply("human", human_.get());
+	SceneSaveData::Apply("axis", axis_.get());
+	SceneSaveData::Apply("ground", ground_.get());
+
+	// カメラの追従対象（名前で登録し、ImGui で切り替えられる）。axis はロックオンの練習用
+	camera_->AddTarget("human", [this] { return position_; }, [this] { return yaw_; });
+	camera_->AddTarget("axis", [this] { return axis_->GetPosition(); });
+	camera_->SetTarget("human", 0.0f);
+	camera_->SetViewMode(TuboEngine::UniversalCamera::ViewMode::Behind, 0.0f);
+	camera_->Update(0.0f);
 }
 
 TuboEngine::Animation TsubokiScene::CreateIdlePose() const {
@@ -109,9 +119,17 @@ TuboEngine::Animation TsubokiScene::CreateIdlePose() const {
 // =============================================================================
 void TsubokiScene::Update() {
 	UpdateCharacter();
-	UpdateCamera();
 
-	camera_->Update();
+	// Q でロックオン切り替え（相手は axis）
+	if (Input::GetInstance()->TriggerKey(DIK_Q)) {
+		if (camera_->IsLockedOn()) {
+			camera_->ClearLockOn();
+		} else {
+			camera_->LockOn("axis");
+		}
+	}
+	// カメラはキャラクターを動かした後、オブジェクトの Update の前に更新する
+	camera_->Update(TuboEngine::Time::DeltaTime());
 	axis_->Update();
 	ground_->Update();
 	human_->Update(TuboEngine::Time::DeltaTime());
@@ -175,11 +193,6 @@ void TsubokiScene::UpdateCharacter() {
 	human_->SetScale({modelScale_, modelScale_, modelScale_});
 }
 
-void TsubokiScene::UpdateCamera() {
-	camera_->SetTranslate({position_.x + cameraOffset_.x, position_.y + cameraOffset_.y, position_.z + cameraOffset_.z});
-	camera_->setRotation({cameraPitch_, 0.0f, 0.0f});
-}
-
 // =============================================================================
 //  描画フェーズ
 // =============================================================================
@@ -205,6 +218,7 @@ void TsubokiScene::ImGuiDraw() {
 #ifdef USE_IMGUI
 	// Hierarchy / Inspector / Timeline に出す（クリックで選択 → Gizmo で移動・キーフレーム作成）
 	TuboEngine::Editor::Inspect("human", human_.get());
+	camera_->DrawImGui(); // UniversalCamera の操作画面（Hierarchy にも "Camera" が出る）
 	TuboEngine::Editor::Inspect("axis", axis_.get());
 	TuboEngine::Editor::Inspect("ground", ground_.get());
 
@@ -213,7 +227,7 @@ void TsubokiScene::ImGuiDraw() {
 
 	ImGui::Begin("Human");
 	ImGui::Separator();
-	ImGui::Text("Controller  (WASD: 移動 / Shift: しのび足)");
+	ImGui::Text("Controller  (WASD: 移動 / Shift: しのび足 / Q: ロックオン)");
 	ImGui::Text("State: %s", animController_.GetCurrentState().c_str());
 	ImGui::Checkbox("右手の位置を表示", &showHandMarker_);
 	ImGui::DragFloat("Model Scale", &modelScale_, 0.01f, 0.1f, 10.0f);
@@ -221,8 +235,6 @@ void TsubokiScene::ImGuiDraw() {
 	ImGui::DragFloat("Sneak Speed", &sneakSpeed_, 0.05f, 0.0f, 10.0f);
 	ImGui::DragFloat("Turn Speed", &turnSpeed_, 0.1f, 0.0f, 30.0f);
 	ImGui::DragFloat("Blend Time", &blendTime_, 0.01f, 0.0f, 1.0f);
-	ImGui::DragFloat3("Camera Offset", &cameraOffset_.x, 0.1f);
-	ImGui::DragFloat("Camera Pitch", &cameraPitch_, 0.01f);
 	ImGui::End();
 	animController_.DrawImGui("Human");
 #endif

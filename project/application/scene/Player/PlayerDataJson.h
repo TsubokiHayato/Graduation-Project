@@ -1,0 +1,110 @@
+#pragma once
+#include "JsonManager.h"
+#include "PlayerData.h"
+
+// JSONファイルのパス
+inline constexpr char kPlayerJsonPath[] = "Resources/Player.json";
+
+// JSON全体のデータ
+struct PlayerDataJsonFormat {
+    // 初期値
+    PlayerData defaultData;
+    // 最新値
+    PlayerData currentData;
+};
+
+// プレイヤ―のパラメータJson読み込みクラス
+class PlayerDataJson {
+public:
+    // JSON読み込み
+    bool Load(PlayerData& data);
+
+    // JSON保存
+    // 最新値(current)というパラメータ生成、保存する
+    bool Save(const PlayerData& data);
+    // JSON全体を保存
+    bool SaveJson();
+
+    // 初期値(default)に戻す
+    bool Reset(PlayerData& data);
+
+    // 最新値が存在するか
+    bool HasCurrent() const {
+        return hasCurrent_;
+    }
+private:
+	// JSON全体のデータ
+    PlayerDataJsonFormat jsonData_{};
+    // JSONに最新値が存在するか
+    bool hasCurrent_ = false;
+private:
+    // PlayerDataを丸めたJSONに変換
+    static TuboEngine::JsonManager::Json ToRoundedJson(const PlayerData& data);
+    // 小数点以下3桁に丸める
+    // 戻り値はdoubleにする
+    static double Round3(float value) { return std::round(static_cast<double>(value) * 1000.0) / 1000.0; }
+};
+
+// =========================================
+// TransformのJSON変換
+// =========================================
+#define PLAYER_TRANSFORM_FIELDS(X) \
+    X("scale", scale)              \
+    X("rotate", rotate)            \
+    X("translate", translate)
+
+namespace TuboEngine { TUBO_JSON_DEFINE(Transform, PLAYER_TRANSFORM_FIELDS) }
+
+// =========================================
+// エネルギー配分データのJSON変換
+// =========================================
+#define PLAYER_ENERGY_FIELDS(X) \
+    X("maxenergy", maxenergy)   \
+    X("shield", shield)         \
+    X("fight", fight)           \
+    X("beam", beam)             \
+    X("booster", booster)
+
+TUBO_JSON_DEFINE(PlayerEnergyData, PLAYER_ENERGY_FIELDS)
+
+// =========================================
+// 移動関連データのJSON変換
+// =========================================
+#define MOVEMENT_FIELDS(X) \
+    X("maxspeed", maxspeed) \
+    X("maxdashdistance", maxdashdistance) \
+    X("dashduration", dashduration) \
+    X("dashcooldown", dashcooldown) \
+
+TUBO_JSON_DEFINE(MovementData, MOVEMENT_FIELDS)
+
+// =========================================
+// HPデータのJSON変換
+// =========================================
+#define PLAYER_HP_FIELDS(X) \
+    X("maxhp", maxhp) \
+    X("currenthp", currenthp) \
+    X("invincibleduration", invincibleduration)
+
+TUBO_JSON_DEFINE(PlayerHPData, PLAYER_HP_FIELDS)
+
+// =========================================
+// PlayerDataのJSON変換
+// =========================================
+#define PLAYER_DATA_FIELDS(X) \
+    X("transform", transform)  \
+    X("energy", energy)        \
+    X("movement", movement)    \
+    X("hp", hp)                \
+    X("state", state)
+
+TUBO_JSON_DEFINE(PlayerData, PLAYER_DATA_FIELDS)
+
+// =========================================
+// JSON全体の変換
+// =========================================
+#define PLAYER_JSON_FIELDS(X) \
+    X("default", defaultData) \
+    X("current", currentData)
+
+TUBO_JSON_DEFINE(PlayerDataJsonFormat, PLAYER_JSON_FIELDS)

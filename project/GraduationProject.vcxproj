@@ -65,7 +65,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)EngineCore\;$(ProjectDir)EngineCore\engine\base;$(ProjectDir)EngineCore\engine\graphic;$(ProjectDir)EngineCore\engine\graphic\2d;$(ProjectDir)EngineCore\engine\graphic\3d;$(ProjectDir)EngineCore\engine\input;$(ProjectDir)EngineCore\engine\leakChecker;$(ProjectDir)EngineCore\engine\math;$(ProjectDir)EngineCore\engine\imgui;$(ProjectDir)EngineCore\engine\camera;$(ProjectDir)EngineCore\engine\audio;$(ProjectDir)EngineCore\engine\graphic\Particle;$(ProjectDir)EngineCore\engine\scene;$(ProjectDir)EngineCore\engine\base\Framework;$(ProjectDir)EngineCore\engine\base\Utilities;$(ProjectDir)EngineCore\engine\base\Common;$(ProjectDir)EngineCore\engine\graphic\data;$(ProjectDir)EngineCore\engine\graphic\PSO;$(ProjectDir)EngineCore\externals\assimp\include;$(ProjectDir)EngineCore\engine\graphic\PSO\Blend;$(ProjectDir)EngineCore\engine\graphic\PSO\PostEffect;$(ProjectDir)EngineCore\engine\graphic\PostEffect;$(ProjectDir)EngineCore\engine\graphic\SkyBox;$(ProjectDir)application;$(ProjectDir)application\scene;$(ProjectDir)EngineCore\engine\graphic\line;$(ProjectDir)EngineCore\engine\graphic\Animation;$(ProjectDir)EngineCore\externals\nlohmann</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)EngineCore\;$(ProjectDir)EngineCore\engine\base;$(ProjectDir)EngineCore\engine\graphic;$(ProjectDir)EngineCore\engine\graphic\2d;$(ProjectDir)EngineCore\engine\graphic\3d;$(ProjectDir)EngineCore\engine\input;$(ProjectDir)EngineCore\engine\leakChecker;$(ProjectDir)EngineCore\engine\math;$(ProjectDir)EngineCore\engine\imgui;$(ProjectDir)EngineCore\engine\camera;$(ProjectDir)EngineCore\engine\audio;$(ProjectDir)EngineCore\engine\graphic\Particle;$(ProjectDir)EngineCore\engine\scene;$(ProjectDir)EngineCore\engine\base\Framework;$(ProjectDir)EngineCore\engine\base\Utilities;$(ProjectDir)EngineCore\engine\base\Common;$(ProjectDir)EngineCore\engine\graphic\data;$(ProjectDir)EngineCore\engine\graphic\PSO;$(ProjectDir)EngineCore\externals\assimp\include;$(ProjectDir)EngineCore\engine\graphic\PSO\Blend;$(ProjectDir)EngineCore\engine\graphic\PSO\PostEffect;$(ProjectDir)EngineCore\engine\graphic\PostEffect;$(ProjectDir)EngineCore\engine\graphic\SkyBox;$(ProjectDir)application;$(ProjectDir)application\scene;$(ProjectDir)EngineCore\engine\graphic\line;$(ProjectDir)EngineCore\engine\graphic\Animation;$(ProjectDir)EngineCore\externals\nlohmann;$(ProjectDir)EngineCore\engine\Collider</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -96,7 +96,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)EngineCore\;$(ProjectDir)EngineCore\engine\base;$(ProjectDir)EngineCore\engine\graphic;$(ProjectDir)EngineCore\engine\graphic\2d;$(ProjectDir)EngineCore\engine\graphic\3d;$(ProjectDir)EngineCore\engine\input;$(ProjectDir)EngineCore\engine\leakChecker;$(ProjectDir)EngineCore\engine\math;$(ProjectDir)EngineCore\engine\imgui;$(ProjectDir)EngineCore\engine\camera;$(ProjectDir)EngineCore\engine\audio;$(ProjectDir)EngineCore\engine\graphic\Particle;$(ProjectDir)EngineCore\engine\scene;$(ProjectDir)EngineCore\engine\base\Framework;$(ProjectDir)EngineCore\engine\base\Utilities;$(ProjectDir)EngineCore\engine\base\Common;$(ProjectDir)EngineCore\engine\graphic\data;$(ProjectDir)EngineCore\engine\graphic\PSO;$(ProjectDir)EngineCore\externals\assimp\include;$(ProjectDir)EngineCore\engine\graphic\PSO\Blend;$(ProjectDir)EngineCore\engine\graphic\PSO\PostEffect;$(ProjectDir)EngineCore\engine\graphic\PostEffect;$(ProjectDir)EngineCore\engine\graphic\SkyBox;$(ProjectDir)application;$(ProjectDir)application\scene;$(ProjectDir)EngineCore\engine\graphic\line;$(ProjectDir)EngineCore\engine\graphic\Animation;$(ProjectDir)EngineCore\externals\nlohmann</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)EngineCore\;$(ProjectDir)EngineCore\engine\base;$(ProjectDir)EngineCore\engine\graphic;$(ProjectDir)EngineCore\engine\graphic\2d;$(ProjectDir)EngineCore\engine\graphic\3d;$(ProjectDir)EngineCore\engine\input;$(ProjectDir)EngineCore\engine\leakChecker;$(ProjectDir)EngineCore\engine\math;$(ProjectDir)EngineCore\engine\imgui;$(ProjectDir)EngineCore\engine\camera;$(ProjectDir)EngineCore\engine\audio;$(ProjectDir)EngineCore\engine\graphic\Particle;$(ProjectDir)EngineCore\engine\scene;$(ProjectDir)EngineCore\engine\base\Framework;$(ProjectDir)EngineCore\engine\base\Utilities;$(ProjectDir)EngineCore\engine\base\Common;$(ProjectDir)EngineCore\engine\graphic\data;$(ProjectDir)EngineCore\engine\graphic\PSO;$(ProjectDir)EngineCore\externals\assimp\include;$(ProjectDir)EngineCore\engine\graphic\PSO\Blend;$(ProjectDir)EngineCore\engine\graphic\PSO\PostEffect;$(ProjectDir)EngineCore\engine\graphic\PostEffect;$(ProjectDir)EngineCore\engine\graphic\SkyBox;$(ProjectDir)application;$(ProjectDir)application\scene;$(ProjectDir)EngineCore\engine\graphic\line;$(ProjectDir)EngineCore\engine\graphic\Animation;$(ProjectDir)EngineCore\externals\nlohmann;$(ProjectDir)EngineCore\engine\Collider</AdditionalIncludeDirectories>
       <Optimization>MinSpace</Optimization>
     </ClCompile>
     <Link>
@@ -124,6 +124,11 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="application\Boss\BossAttackOmniBomb.cpp" />
     <ClCompile Include="application\Boss\BossAttackState.cpp" />
     <ClCompile Include="application\Boss\BossAttackSweep.cpp" />
+    <ClCompile Include="application\scene\Player\Player.cpp" />
+    <ClCompile Include="application\scene\Player\PlayerDataJson.cpp" />
+    <ClCompile Include="application\scene\Player\PlayerEnergyOutput.cpp" />
+    <ClCompile Include="application\scene\Player\PlayerHP.cpp" />
+    <ClCompile Include="application\scene\Player\PlayerMovement.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="FadeScreen.cpp" />
     <ClCompile Include="application\Order.cpp" />
@@ -146,6 +151,14 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="application\Boss\BossAttackOmniBomb.h" />
     <ClInclude Include="application\Boss\BossAttackState.h" />
     <ClInclude Include="application\Boss\BossAttackSweep.h" />
+    <ClInclude Include="application\scene\Player\Player.h" />
+    <ClInclude Include="application\scene\Player\PlayerData.h" />
+    <ClInclude Include="application\scene\Player\PlayerDataJson.h" />
+    <ClInclude Include="application\scene\Player\PlayerEnergyOutput.h" />
+    <ClInclude Include="application\scene\Player\PlayerHP.h" />
+    <ClInclude Include="application\scene\Player\PlayerMovement.h" />
+    <ClInclude Include="EngineCore\engine\Collider\BossHitDebugDraw.h" />
+    <ClInclude Include="EngineCore\engine\Collider\BossHitShapes.h" />
     <ClInclude Include="FadeScreen.h" />
     <ClInclude Include="application\Order.h" />
     <ClInclude Include="application\scene\GameScenes.h" />
