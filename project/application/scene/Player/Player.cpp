@@ -64,18 +64,6 @@ void Player::DrawImGui() {
 #ifdef USE_IMGUI
     object_->DrawImGui("Player");
 
-    // エネルギー管理クラスのimgui
-    energyoutput_->DrawImGui();
-    ImGui::Separator();
-    
-    // HPのimui
-    hp_->DrawImGui();
-    ImGui::Separator();
-
-    // 移動処理関連のimgui
-	movement_->DrawImGui(energyoutput_->GetBoosterOutputRate());
-    ImGui::Separator();
-
     // 保存ボタン
     if (ImGui::Button("Save")) {
         // エネルギーデータをPlayer側に反映
@@ -88,9 +76,7 @@ void Player::DrawImGui() {
             ImGui::OpenPopup("Save Error");
         }
     }
-
     ImGui::Separator();
-
     // 初期値に戻すボタン
     ImGui::BeginDisabled(!dataJson_->HasCurrent());
 
@@ -106,6 +92,32 @@ void Player::DrawImGui() {
         // 移動設定を初期化
         movement_->Initialize(object_.get(), data_.movement);
     }
+    ImGui::Separator();
+
+    ImGui::Text("Player State");
+    switch (data_.state) {
+    case PlayerState::Alive:
+        ImGui::TextColored(ImVec4(0.3f, 0.9f, 0.4f, 1.0f), "ALIVE");
+        break;
+    case PlayerState::Dead:
+        ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "DEAD");
+        break;
+    default:
+        ImGui::Text("UNKNOWN");
+        break;
+    }
+    ImGui::Separator();
+
+    // エネルギー管理クラスのimgui
+    energyoutput_->DrawImGui();
+    ImGui::Separator();
+    
+    // HPのimui
+    hp_->DrawImGui();
+    ImGui::Separator();
+
+    // 移動処理関連のimgui
+	movement_->DrawImGui(energyoutput_->GetBoosterOutputRate());   
 
     ImGui::EndDisabled();
 #endif

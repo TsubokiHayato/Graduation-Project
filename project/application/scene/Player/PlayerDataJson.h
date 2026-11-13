@@ -79,16 +79,6 @@ TUBO_JSON_DEFINE(PlayerEnergyData, PLAYER_ENERGY_FIELDS)
 TUBO_JSON_DEFINE(MovementData, MOVEMENT_FIELDS)
 
 // =========================================
-// PlayerDataのJSON変換
-// =========================================
-#define PLAYER_DATA_FIELDS(X) \
-    X("transform", transform)  \
-    X("energy", energy)        \
-    X("movement", movement)
-
-TUBO_JSON_DEFINE(PlayerData, PLAYER_DATA_FIELDS)
-
-// =========================================
 // HPデータのJSON変換
 // =========================================
 #define PLAYER_HP_FIELDS(X) \
@@ -97,6 +87,18 @@ TUBO_JSON_DEFINE(PlayerData, PLAYER_DATA_FIELDS)
     X("invincibleduration", invincibleduration)
 
 TUBO_JSON_DEFINE(PlayerHPData, PLAYER_HP_FIELDS)
+
+// =========================================
+// PlayerDataのJSON変換
+// =========================================
+#define PLAYER_DATA_FIELDS(X) \
+    X("transform", transform)  \
+    X("energy", energy)        \
+    X("movement", movement)    \
+    X("hp", hp)                \
+    X("state", state)
+
+TUBO_JSON_DEFINE(PlayerData, PLAYER_DATA_FIELDS)
 
 // =========================================
 // JSON全体の変換

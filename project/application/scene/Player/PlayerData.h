@@ -33,17 +33,20 @@ struct PlayerHPData {
 };
 
 // =========================================
+// プレイヤ―の状態
+// =========================================
+enum class PlayerState {
+    Alive,  // 生存中
+    Dead    // 死亡中
+};
+
+// =========================================
 // プレイヤ―データ
 // =========================================
 struct PlayerData {
     TuboEngine::Transform transform;    // Transform
-	PlayerEnergyData energy;	        // エネルギー配分データ 
+    PlayerState state;                  // プレイヤーの状態
+    PlayerEnergyData energy;	        // エネルギー配分データ 
     MovementData movement;              // 移動速度
     PlayerHPData hp;                    // HP設定
 };
-
-
-////enum class PlayerState {
-////    Alive,  // 生存中
-////    Dead    // 死亡中
-////};

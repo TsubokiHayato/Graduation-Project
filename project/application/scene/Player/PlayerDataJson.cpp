@@ -127,6 +127,10 @@ JsonManager::Json PlayerDataJson::ToRoundedJson(const PlayerData& data) {
     json["hp"]["maxhp"] = Round3(data.hp.maxhp);
     json["hp"]["currenthp"] = Round3(data.hp.currenthp);
     json["hp"]["invincibleduration"] = Round3(data.hp.invincibleduration);
+    // =========================================
+    // ステート状態
+    // =========================================
+    json["state"] = static_cast<int>(data.state);
 
     return json;
 }
