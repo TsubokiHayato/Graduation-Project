@@ -5,6 +5,7 @@
 #include "Object3d.h"
 #include "Animator.h"
 #include "AnimatorController.h"
+#include "ui/Reticle.h"
 #include <memory>
 
 class TsubokiScene : public IScene {
@@ -49,6 +50,10 @@ private:
 	// アニメーションの状態遷移（Idle / Walk / SneakWalk）。条件は Initialize で登録
 	TuboEngine::AnimatorController animController_;
 	bool showHandMarker_ = false; // 右手の位置に球を表示する（ボーン位置取得の確認用）
+
+	// 画面中央のレティクル（出力配分ゲージ付き）。試作中は 1〜4 / 0 キーで配分を切り替える
+	Reticle reticle_;
+	float lockOnAimHeight_ = 1.0f; // ロックオン時に狙う高さ（相手の足元からの距離, m）
 
 	// カメラ（キャラクターからの相対位置）
 };

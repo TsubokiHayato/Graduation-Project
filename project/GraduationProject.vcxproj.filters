@@ -22,6 +22,9 @@
     <Filter Include="application\settings">
       <UniqueIdentifier>{a0397c94-7c29-42cd-9b56-17e27bd064e4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="application\ui">
+      <UniqueIdentifier>{5b1e7c2a-3d4f-4a8e-9c61-2f7d8e0a4b13}</UniqueIdentifier>
+    </Filter>
     <Filter Include="application\audio">
       <UniqueIdentifier>{4eba0ed1-8bf0-4e44-bb0b-002251f11a3b}</UniqueIdentifier>
     </Filter>
@@ -52,6 +55,9 @@
     </ClCompile>
     <ClCompile Include="application\scene\Member\SatouScene.cpp">
       <Filter>application\scene\Member</Filter>
+    </ClCompile>
+    <ClCompile Include="application\ui\Reticle.cpp">
+      <Filter>application\ui</Filter>
     </ClCompile>
     <ClCompile Include="application\scene\Member\TsubokiScene.cpp">
       <Filter>application\scene\Member</Filter>
@@ -94,6 +100,9 @@
     </ClInclude>
     <ClInclude Include="application\scene\Member\SatouScene.h">
       <Filter>application\scene\Member</Filter>
+    </ClInclude>
+    <ClInclude Include="application\ui\Reticle.h">
+      <Filter>application\ui</Filter>
     </ClInclude>
     <ClInclude Include="application\scene\Member\TsubokiScene.h">
       <Filter>application\scene\Member</Filter>

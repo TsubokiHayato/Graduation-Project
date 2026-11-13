@@ -7,6 +7,7 @@
 #include "EditorObjects.h"
 #include "SceneSaveData.h"
 #include "GameTime.h"
+#include "WinApp.h"
 #include <algorithm>
 #include <cmath>
 #include <numbers>
@@ -83,6 +84,10 @@ void TsubokiScene::Initialize() {
 	camera_->SetTarget("human", 0.0f);
 	camera_->SetViewMode(TuboEngine::UniversalCamera::ViewMode::Behind, 0.0f);
 	camera_->Update(0.0f);
+
+	reticle_.Initialize();
+	TuboEngine::WinApp* winApp = TuboEngine::WinApp::GetInstance();
+	reticle_.SetCenter({winApp->GetClientWidth() * 0.5f, winApp->GetClientHeight() * 0.5f});
 }
 
 TuboEngine::Animation TsubokiScene::CreateIdlePose() const {
@@ -138,6 +143,23 @@ void TsubokiScene::Update() {
 	if (showHandMarker_) {
 		LineManager::GetInstance()->DrawSphere(human_->GetJointWorldPosition("mixamorig:RightHand"), 0.08f, {1.0f, 0.3f, 0.3f, 1.0f}, 12);
 	}
+
+	// 出力配分の試作操作（本番は専用コントローラーのスライダーから SetOutputs する）
+	Input* input = Input::GetInstance();
+	if (input->TriggerKey(DIK_1)) { reticle_.SetOutputs({0.0f, 0.0f, 100.0f, 0.0f}); }  // シールド全振り
+	if (input->TriggerKey(DIK_2)) { reticle_.SetOutputs({100.0f, 0.0f, 0.0f, 0.0f}); }  // 近接全振り
+	if (input->TriggerKey(DIK_3)) { reticle_.SetOutputs({0.0f, 100.0f, 0.0f, 0.0f}); }  // 遠距離全振り
+	if (input->TriggerKey(DIK_4)) { reticle_.SetOutputs({30.0f, 0.0f, 0.0f, 70.0f}); }  // ブースター70 / 近接30
+	if (input->TriggerKey(DIK_0)) { reticle_.SetOutputs({25.0f, 25.0f, 25.0f, 25.0f}); } // 均等
+	// ロックオン中はレティクルを相手（axis）へ寄せる。カメラ更新後の行列で画面座標に直す
+	if (camera_->IsLockedOn()) {
+		Math::Vector3 target = axis_->GetPosition();
+		target.y += lockOnAimHeight_;
+		reticle_.SetLockOn(target, *camera_->GetCamera());
+	} else {
+		reticle_.ClearLockOn();
+	}
+	reticle_.Update(TuboEngine::Time::DeltaTime());
 
 	TextManager::GetInstance()->UpdateAll();
 }
@@ -206,6 +228,7 @@ void TsubokiScene::Object3DDraw() {
 }
 
 void TsubokiScene::SpriteDraw() {
+	reticle_.Draw();
 	TextManager::GetInstance()->DrawAll();
 }
 
@@ -237,6 +260,10 @@ void TsubokiScene::ImGuiDraw() {
 	ImGui::DragFloat("Blend Time", &blendTime_, 0.01f, 0.0f, 1.0f);
 	ImGui::End();
 	animController_.DrawImGui("Human");
+	reticle_.DrawImGui();
+	ImGui::Begin("Reticle");
+	ImGui::DragFloat("Lock On Aim Height", &lockOnAimHeight_, 0.05f, -5.0f, 10.0f);
+	ImGui::End();
 #endif
 }
 
