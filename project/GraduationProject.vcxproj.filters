@@ -25,6 +25,9 @@
     <Filter Include="application\audio">
       <UniqueIdentifier>{4eba0ed1-8bf0-4e44-bb0b-002251f11a3b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="application\scene\Player">
+      <UniqueIdentifier>{e29ee866-2a22-4ddd-a4f4-dbb29b22a8ef}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -64,6 +67,21 @@
     </ClCompile>
     <ClCompile Include="application\audio\AudioManager.cpp">
       <Filter>application\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Player\Player.cpp">
+      <Filter>application\scene\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Player\PlayerDataJson.cpp">
+      <Filter>application\scene\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Player\PlayerMovement.cpp">
+      <Filter>application\scene\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Player\PlayerEnergyOutput.cpp">
+      <Filter>application\scene\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Player\PlayerHP.cpp">
+      <Filter>application\scene\Player</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -106,6 +124,24 @@
     </ClInclude>
     <ClInclude Include="application\audio\AudioManager.h">
       <Filter>application\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Player\Player.h">
+      <Filter>application\scene\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Player\PlayerData.h">
+      <Filter>application\scene\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Player\PlayerDataJson.h">
+      <Filter>application\scene\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Player\PlayerMovement.h">
+      <Filter>application\scene\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Player\PlayerEnergyOutput.h">
+      <Filter>application\scene\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Player\PlayerHP.h">
+      <Filter>application\scene\Player</Filter>
     </ClInclude>
     <ClInclude Include="EngineCore\engine\Collider\BossHitShapes.h" />
     <ClInclude Include="EngineCore\engine\Collider\BossHitDebugDraw.h" />
