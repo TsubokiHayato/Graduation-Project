@@ -80,6 +80,9 @@
     <ClCompile Include="application\scene\Player\PlayerEnergyOutput.cpp">
       <Filter>application\scene\Player</Filter>
     </ClCompile>
+    <ClCompile Include="application\scene\Player\PlayerHP.cpp">
+      <Filter>application\scene\Player</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FadeScreen.h" />
@@ -135,6 +138,9 @@
       <Filter>application\scene\Player</Filter>
     </ClInclude>
     <ClInclude Include="application\scene\Player\PlayerEnergyOutput.h">
+      <Filter>application\scene\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Player\PlayerHP.h">
       <Filter>application\scene\Player</Filter>
     </ClInclude>
   </ItemGroup>

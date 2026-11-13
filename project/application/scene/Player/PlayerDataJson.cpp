@@ -105,7 +105,7 @@ JsonManager::Json PlayerDataJson::ToRoundedJson(const PlayerData& data) {
         Round3(data.transform.translate.y),
         Round3(data.transform.translate.z)
     };
-    
+
     // =========================================
     // エネルギーデータ読み込み
     // =========================================
@@ -114,7 +114,6 @@ JsonManager::Json PlayerDataJson::ToRoundedJson(const PlayerData& data) {
     json["energy"]["fight"] = Round3(data.energy.fight);
     json["energy"]["beam"] = Round3(data.energy.beam);
     json["energy"]["booster"] = Round3(data.energy.booster);
-
     // =========================================
     // 移動処理データ読み込み
     // =========================================
@@ -122,5 +121,12 @@ JsonManager::Json PlayerDataJson::ToRoundedJson(const PlayerData& data) {
     json["movement"]["maxdashdistance"] = Round3(data.movement.maxdashdistance);
     json["movement"]["dashduration"] = Round3(data.movement.dashduration);
     json["movement"]["dashcooldown"] = Round3(data.movement.dashcooldown);
+    // =========================================
+    // HPデータ読み込み
+    // =========================================
+    json["hp"]["maxhp"] = Round3(data.hp.maxhp);
+    json["hp"]["currenthp"] = Round3(data.hp.currenthp);
+    json["hp"]["invincibleduration"] = Round3(data.hp.invincibleduration);
+
     return json;
 }

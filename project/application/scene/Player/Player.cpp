@@ -31,12 +31,17 @@ void Player::Initialize(TuboEngine::Camera* camera) {
     // 移動処理クラスの生成、初期化
     movement_ = std::make_unique<PlayerMovement>();
     movement_->Initialize(object_.get(), data_.movement);
+    // HPクラスの生成、初期化
+    hp_ = std::make_unique<PlayerHP>();
+    hp_->Initialize(data_.hp);
 }
 
 // =========================================
 // Update
 // =========================================
 void Player::Update() {
+    // HPの更新処理
+    hp_->Update();
 
     // 移動処理関連の更新処理
     movement_->Update(energyoutput_->GetBoosterOutputRate());
@@ -44,7 +49,6 @@ void Player::Update() {
     // モデル更新
     object_->Update();
 }
-
 
 // =========================================
 // Draw
@@ -58,15 +62,18 @@ void Player::Draw() {
 // =========================================
 void Player::DrawImGui() {
 #ifdef USE_IMGUI
-
     object_->DrawImGui("Player");
 
     // エネルギー管理クラスのimgui
     energyoutput_->DrawImGui();
     ImGui::Separator();
+    
+    // HPのimui
+    hp_->DrawImGui();
+    ImGui::Separator();
+
     // 移動処理関連のimgui
 	movement_->DrawImGui(energyoutput_->GetBoosterOutputRate());
-
     ImGui::Separator();
 
     // 保存ボタン

@@ -7,6 +7,11 @@
       "maxenergy": 100.0,
       "shield": 10.0
     },
+    "hp": {
+      "currenthp": 100.0,
+      "invincibleduration": 1.0,
+      "maxhp": 100.0
+    },
     "movement": {
       "dashcooldown": 1.0,
       "dashduration": 0.1,
@@ -39,10 +44,15 @@
       "maxenergy": 100.0,
       "shield": 25.0
     },
+    "hp": {
+      "currenthp": 100.0,
+      "invincibleduration": 1.0,
+      "maxhp": 100.0
+    },
     "movement": {
-      "dashcooldown": 2.0,
-      "dashduration": 0.5,
-      "maxdashdistance": 10.0,
+      "dashcooldown": 1.0,
+      "dashduration": 0.1,
+      "maxdashdistance": 30.0,
       "maxspeed": 1.0
     },
     "transform": {

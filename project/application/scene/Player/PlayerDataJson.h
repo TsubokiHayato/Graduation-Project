@@ -89,6 +89,16 @@ TUBO_JSON_DEFINE(MovementData, MOVEMENT_FIELDS)
 TUBO_JSON_DEFINE(PlayerData, PLAYER_DATA_FIELDS)
 
 // =========================================
+// HPデータのJSON変換
+// =========================================
+#define PLAYER_HP_FIELDS(X) \
+    X("maxhp", maxhp) \
+    X("currenthp", currenthp) \
+    X("invincibleduration", invincibleduration)
+
+TUBO_JSON_DEFINE(PlayerHPData, PLAYER_HP_FIELDS)
+
+// =========================================
 // JSON全体の変換
 // =========================================
 #define PLAYER_JSON_FIELDS(X) \

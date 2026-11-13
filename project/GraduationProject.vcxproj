@@ -121,6 +121,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="application\scene\Player\Player.cpp" />
     <ClCompile Include="application\scene\Player\PlayerDataJson.cpp" />
     <ClCompile Include="application\scene\Player\PlayerEnergyOutput.cpp" />
+    <ClCompile Include="application\scene\Player\PlayerHP.cpp" />
     <ClCompile Include="application\scene\Player\PlayerMovement.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="FadeScreen.cpp" />
@@ -142,6 +143,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="application\scene\Player\PlayerData.h" />
     <ClInclude Include="application\scene\Player\PlayerDataJson.h" />
     <ClInclude Include="application\scene\Player\PlayerEnergyOutput.h" />
+    <ClInclude Include="application\scene\Player\PlayerHP.h" />
     <ClInclude Include="application\scene\Player\PlayerMovement.h" />
     <ClInclude Include="FadeScreen.h" />
     <ClInclude Include="application\Order.h" />
