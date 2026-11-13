@@ -9,8 +9,8 @@
     },
     "movement": {
       "dashcooldown": 1.0,
-      "dashduration": 0.05,
-      "maxdashdistance": 20.0,
+      "dashduration": 0.1,
+      "maxdashdistance": 50.0,
       "maxspeed": 0.5
     },
     "transform": {

@@ -170,40 +170,52 @@ void PlayerMovement::DrawImGui(float booster) {
         // =========================================
         ImGui::Separator();
         ImGui::Text("Dash Status");
-
-        // 現在のダッシュ距離
-        ImGui::Text("Current Dash Distance: %.2f", movedata_.maxdashdistance * booster);
-
-        // ダッシュ中のゲージ
+        // ダッシュ状態（色分け）
         if (isDashing_) {
-            float dashProgress = dashTimer_ / movedata_.dashduration;
-            dashProgress = std::clamp(dashProgress, 0.0f, 1.0f);
+            ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "DASHING");
+        } else if (dashCooldownTimer_ <= 0.0f) {
+            ImGui::TextColored(ImVec4(0.3f, 0.9f, 0.4f, 1.0f), "DASH READY");
+        } else {
+            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "COOLDOWN");
+        }
+        // ダッシュ中は編集不可
+        if (isDashing_) {
+            ImGui::BeginDisabled();
+        }
+        // ダッシュ距離
+        ImGui::InputFloat("Current Dash Distance", &movedata_.maxdashdistance, 0.1f, 1.0f, "%.2f");
+        // ダッシュ設定時間
+        ImGui::InputFloat("Dash Duration", &movedata_.dashduration, 0.1f, 1.0f, "%.2f");
+        // ダッシュ経過時間（表示のみ）
+        ImGui::Text("Dash Timer: %.2f sec", dashTimer_);
+        // ダッシュクールタイム設定
+        ImGui::InputFloat("Dash Cooldown", &movedata_.dashcooldown, 0.1f, 1.0f, "%.2f");
 
-            ImGui::TextColored(ImVec4(0.3f, 0.9f, 0.4f, 1.0f), "DASHING!");
-            ImGui::Text("Dash Time: %.2f / %.2f sec", dashTimer_, movedata_.dashduration);
-            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.2f, 0.8f, 1.0f, 1.0f));
-            ImGui::ProgressBar(dashProgress, ImVec2(-1.0f, 0.0f), "Dash");
-            ImGui::PopStyleColor();
+        // ダッシュ中の編集制限解除
+        if (isDashing_) {
+            ImGui::EndDisabled();
         }
 
-        // クールタイムゲージ
+        // マイナス値を許可しない
+        movedata_.maxdashdistance = std::max(0.0f, movedata_.maxdashdistance);
+        movedata_.dashduration = std::max(0.0f, movedata_.dashduration);
+        movedata_.dashcooldown = std::max(0.0f, movedata_.dashcooldown);
+
+        // =========================================
+        // クールタイム表示
+        // =========================================
         if (movedata_.dashcooldown > 0.0f) {
             float cooldownProgress = 1.0f - (dashCooldownTimer_ / movedata_.dashcooldown);
             cooldownProgress = std::clamp(cooldownProgress, 0.0f, 1.0f);
 
-            ImGui::Text("Dash Cooldown");
-            ImGui::Text("Remaining: %.2f sec", dashCooldownTimer_);
+            ImGui::Text("Cooldown Remaining: %.2f sec", dashCooldownTimer_);
             ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.6f, 0.2f, 1.0f));
             ImGui::ProgressBar(cooldownProgress, ImVec2(-1.0f, 0.0f), "Cooldown");
+
             ImGui::PopStyleColor();
         }
 
-        // ダッシュ可能状態
-        if (!isDashing_ && dashCooldownTimer_ <= 0.0f) {
-            ImGui::TextColored(ImVec4(0.3f, 0.9f, 0.4f, 1.0f), "DASH READY");
-        }
     }
-
 #endif
 }
 
