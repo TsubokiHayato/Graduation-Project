@@ -36,21 +36,25 @@ void PlayerHP::Update() {
 // =============================================================================
 // ダメージ処理
 // =============================================================================
-void PlayerHP::TakeDamage(float damage) {
-    //// HPが0、または無敵状態ならダメージを受けない
-    //if (IsDead() || isInvincible_) {
-    //    return;
-    //}
-
+void PlayerHP::TakeDamage(float damage, PlayerState& state) {
+    // 死亡状態、または無敵状態ならダメージを受けない
+    if (state == PlayerState::Dead || isInvincible_) {
+        return;
+    }
     // 余計なダメージを防止
     if (damage <= 0.0f) {
         return;
     }
+
     // HPを減少
     hpdata_.currenthp -= damage;
     // HPが0以下にならないようにする
     hpdata_.currenthp = std::max(0.0f, hpdata_.currenthp);
-
+    // HPが0になったら死亡状態にする
+    if (hpdata_.currenthp <= 0.0f) {
+        state = PlayerState::Dead;
+        return;
+    }
     // 無敵時間を開始
     if (hpdata_.invincibleduration > 0.0f) {
         isInvincible_ = true;
@@ -77,18 +81,20 @@ void PlayerHP::UpdateInvincible(float deltaTime) {
 // =============================================================================
 // HPリセット
 // =============================================================================
-void PlayerHP::ResetHP() {
+void PlayerHP::ResetHP(PlayerState& state) {
     // HPを最大値に戻す
     hpdata_.currenthp = hpdata_.maxhp;
     // 無敵状態を解除
     isInvincible_ = false;
     invincibleTimer_ = 0.0f;
+    // 生存状態に戻す
+    state = PlayerState::Alive;
 }
 
 // =============================================================================
 // ImGui
 // =============================================================================
-void PlayerHP::DrawImGui() {
+void PlayerHP::DrawImGui(PlayerState& state) {
 #ifdef USE_IMGUI
 
     if (ImGui::CollapsingHeader("HP", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -101,28 +107,36 @@ void PlayerHP::DrawImGui() {
         ImGui::InputFloat("Current HP", &hpdata_.currenthp, 1.0f, 10.0f, "%.1f");
         // 現在HPを最大HPの範囲内にする
         hpdata_.currenthp = std::clamp(hpdata_.currenthp, 0.0f, hpdata_.maxhp);
+        // HPゲージ
+        float hpRate = 0.0f;
+        if (hpdata_.maxhp > 0.0f) { hpRate = hpdata_.currenthp / hpdata_.maxhp; }
+        // ゲージの色を赤色にする
+        ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.9f, 0.1f, 0.1f, 1.0f));
+        // HPゲージ表示
+        ImGui::ProgressBar(hpRate, ImVec2(-1.0f, 0.0f), "HP");
+        ImGui::PopStyleColor();
 
         // 無敵時間設定
         ImGui::InputFloat("Invincible Duration", &hpdata_.invincibleduration, 0.1f, 1.0f, "%.2f");
         hpdata_.invincibleduration = std::max(0.0f, hpdata_.invincibleduration);
         ImGui::Separator();
-
         // 無敵状態
         ImGui::Text("Invincible: %s", isInvincible_ ? "YES" : "NO");
         // 無敵時間経過
         ImGui::Text("Invincible Timer: %.2f sec", invincibleTimer_);
-        //// HP状態
-        //if (IsDead()) {
-        //    ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "DEAD");
-        //} else {
-        //    ImGui::TextColored(ImVec4(0.3f, 0.9f, 0.4f, 1.0f), "ALIVE");
-        //}
 
+        // ダメージ処理
+        constexpr float kDamage = 10.0f;
+        // 死亡中、または無敵状態ならボタンを無効化
+        ImGui::BeginDisabled(state == PlayerState::Dead || isInvincible_);
+        if (ImGui::Button("Take Damage (-10 HP)")) {
+            TakeDamage(kDamage, state);
+        }
+        ImGui::EndDisabled();
         // HPリセット
         if (ImGui::Button("Reset HP")) {
-            ResetHP();
+            ResetHP(state);
         }
     }
-
 #endif
 }

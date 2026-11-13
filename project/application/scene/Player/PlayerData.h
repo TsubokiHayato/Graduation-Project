@@ -27,9 +27,9 @@ struct MovementData {
 // HP設定
 // =========================================
 struct PlayerHPData {
-    float maxhp = 100.0f;              // 最大HP
-    float currenthp = 100.0f;          // 現在HP
-    float invincibleduration = 1.0f;   // 無敵時間（秒）
+    float maxhp;                 // 最大HP
+    float currenthp;             // 現在HP
+    float invincibleduration;    // 無敵時間（秒）
 };
 
 // =========================================

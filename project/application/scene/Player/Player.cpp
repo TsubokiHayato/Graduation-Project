@@ -70,6 +70,8 @@ void Player::DrawImGui() {
         data_.energy = energyoutput_->GetEnergyData();
         // 移動データをPlayer側に反映
         data_.movement = movement_->GetMovementData();
+        // HPデータをPlayer側に反映
+        data_.hp = hp_->GetPlayerHPData();
         if (dataJson_->Save(data_)) {
             ImGui::OpenPopup("Save Success");
         } else {
@@ -91,6 +93,8 @@ void Player::DrawImGui() {
         energyoutput_->Initialize(data_.energy);
         // 移動設定を初期化
         movement_->Initialize(object_.get(), data_.movement);
+        // HPデータを初期化
+        hp_->Initialize(data_.hp);
     }
     ImGui::Separator();
 
@@ -113,7 +117,7 @@ void Player::DrawImGui() {
     ImGui::Separator();
     
     // HPのimui
-    hp_->DrawImGui();
+    hp_->DrawImGui(data_.state);
     ImGui::Separator();
 
     // 移動処理関連のimgui

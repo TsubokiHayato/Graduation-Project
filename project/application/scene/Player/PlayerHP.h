@@ -9,14 +9,13 @@ public:
     // 更新処理
     void Update();
     // ImGui
-    void DrawImGui();
+    void DrawImGui(PlayerState& state);
     // ダメージ処理
-    void TakeDamage(float damage);
+    void TakeDamage(float damage, PlayerState& state);
     // 無敵時間更新
     void UpdateInvincible(float deltaTime);
     // HPリセット
-    void ResetHP();
-
+    void ResetHP(PlayerState& state);
 private:
     // プレイヤーのHPデータ
     PlayerHPData hpdata_;
