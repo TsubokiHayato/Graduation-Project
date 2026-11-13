@@ -68,6 +68,15 @@
     <ClCompile Include="application\audio\AudioManager.cpp">
       <Filter>application\audio</Filter>
     </ClCompile>
+    <ClCompile Include="application\scene\Player\BoosterParticlePSO.cpp">
+      <Filter>application\scene\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Player\BoosterParticleEmitter.cpp">
+      <Filter>application\scene\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Player\PlayerBooster.cpp">
+      <Filter>application\scene\Player</Filter>
+    </ClCompile>
     <ClCompile Include="application\scene\Player\Player.cpp">
       <Filter>application\scene\Player</Filter>
     </ClCompile>
@@ -134,6 +143,15 @@
     </ClInclude>
     <ClInclude Include="application\audio\AudioManager.h">
       <Filter>application\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Player\BoosterParticlePSO.h">
+      <Filter>application\scene\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Player\BoosterParticleEmitter.h">
+      <Filter>application\scene\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Player\PlayerBooster.h">
+      <Filter>application\scene\Player</Filter>
     </ClInclude>
     <ClInclude Include="application\scene\Player\Player.h">
       <Filter>application\scene\Player</Filter>

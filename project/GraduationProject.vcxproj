@@ -125,6 +125,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="application\Boss\BossAttackState.cpp" />
     <ClCompile Include="application\Boss\BossAttackSweep.cpp" />
     <ClCompile Include="application\scene\Player\Player.cpp" />
+    <ClCompile Include="application\scene\Player\BoosterParticlePSO.cpp" />
+    <ClCompile Include="application\scene\Player\BoosterParticleEmitter.cpp" />
+    <ClCompile Include="application\scene\Player\PlayerBooster.cpp" />
     <ClCompile Include="application\scene\Player\PlayerDataJson.cpp" />
     <ClCompile Include="application\scene\Player\PlayerEnergyOutput.cpp" />
     <ClCompile Include="application\scene\Player\PlayerHP.cpp" />
@@ -156,6 +159,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="application\Boss\BossAttackState.h" />
     <ClInclude Include="application\Boss\BossAttackSweep.h" />
     <ClInclude Include="application\scene\Player\Player.h" />
+    <ClInclude Include="application\scene\Player\BoosterParticlePSO.h" />
+    <ClInclude Include="application\scene\Player\BoosterParticleEmitter.h" />
+    <ClInclude Include="application\scene\Player\PlayerBooster.h" />
     <ClInclude Include="application\scene\Player\PlayerData.h" />
     <ClInclude Include="application\scene\Player\PlayerDataJson.h" />
     <ClInclude Include="application\scene\Player\PlayerEnergyOutput.h" />
