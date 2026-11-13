@@ -83,6 +83,12 @@
     <ClCompile Include="application\scene\Player\PlayerHP.cpp">
       <Filter>application\scene\Player</Filter>
     </ClCompile>
+    <ClCompile Include="application\Boss\Boss.cpp" />
+    <ClCompile Include="application\Boss\BossAttackOmniBomb.cpp" />
+    <ClCompile Include="application\Boss\BossAttackState.cpp" />
+    <ClCompile Include="application\Boss\BossAttackLockOnBeam.cpp" />
+    <ClCompile Include="application\Boss\BossAttackBarrage.cpp" />
+    <ClCompile Include="application\Boss\BossAttackSweep.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FadeScreen.h" />
@@ -145,5 +151,11 @@
     </ClInclude>
     <ClInclude Include="EngineCore\engine\Collider\BossHitShapes.h" />
     <ClInclude Include="EngineCore\engine\Collider\BossHitDebugDraw.h" />
+    <ClInclude Include="application\Boss\Boss.h" />
+    <ClInclude Include="application\Boss\BossAttackOmniBomb.h" />
+    <ClInclude Include="application\Boss\BossAttackState.h" />
+    <ClInclude Include="application\Boss\BossAttackLockOnBeam.h" />
+    <ClInclude Include="application\Boss\BossAttackBarrage.h" />
+    <ClInclude Include="application\Boss\BossAttackSweep.h" />
   </ItemGroup>
 </Project>
