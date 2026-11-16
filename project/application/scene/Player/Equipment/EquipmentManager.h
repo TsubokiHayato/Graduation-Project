@@ -3,6 +3,7 @@
 #include "EquipmentDataJson.h"
 #include "Shield.h"
 #include "../PlayerHP.h"
+#include "Camera.h"
 
 // =========================================
 // プレイヤ―の装備管理クラス
@@ -25,15 +26,16 @@ public:
     // シングルトンの終了処理
     static void Finalize();
 public:
-    // 初期化
-    void Initialize(EquipmentData& data, EquipmentDataJson* dataJson);
-    // 更新
+    // 初期化処理
+    void Initialize(EquipmentData& data, EquipmentDataJson* dataJson, TuboEngine::Camera* camera);
+    // 更新処理
     void Update(float shieldOutputRate);
-    // ダメージ処理
-    void TakeDamage(float damage, PlayerHP& hp, PlayerState& state);
+    // 描画処理
+    void Draw();
     // ImGui
     void DrawImGui();
-
+    // ダメージ処理
+    void TakeDamage(float damage, PlayerHP& hp, PlayerState& state);
 private:
     // 装備データ
     EquipmentData* data_ = nullptr;
@@ -41,6 +43,9 @@ private:
     EquipmentDataJson* dataJson_ = nullptr;
     // シールド
     Shield shield_;
+    // カメラ
+    TuboEngine::Camera* camera_ = nullptr;
+
 public:
     // Getter
     Shield* GetShield() { return &shield_; }

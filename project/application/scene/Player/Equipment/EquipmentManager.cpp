@@ -29,13 +29,14 @@ void EquipmentManager::Finalize() {
 // =========================================
 // Initialize
 // =========================================
-void EquipmentManager::Initialize(EquipmentData& data, EquipmentDataJson* dataJson) {
+void EquipmentManager::Initialize(EquipmentData& data, EquipmentDataJson* dataJson, TuboEngine::Camera* camera) {
     // 装備データとJSON読み込みを保持
     data_ = &data;
     dataJson_ = dataJson;
-
+	// カメラを保持
+    camera_ = camera;
     // シールド初期化
-    shield_.Initialize(data.shield);
+    shield_.Initialize(data.shield, camera);
 }
 
 // =========================================
@@ -47,6 +48,14 @@ void EquipmentManager::Update(float shieldOutputRate) {
 
     // シールド更新
     shield_.Update();
+}
+
+// =========================================
+// Draw
+// =========================================
+void EquipmentManager::Draw() {
+    // シールド 描画
+    shield_.Draw();
 }
 
 // =========================================
@@ -66,6 +75,7 @@ void EquipmentManager::TakeDamage(float damage, PlayerHP& hp, PlayerState& state
 // =========================================
 void EquipmentManager::DrawImGui() {
 #ifdef USE_IMGUI
+	// 各装備の設定
     ImGui::Begin("Equipment");
     // シールド設定
     shield_.DrawImGui();
@@ -91,7 +101,7 @@ void EquipmentManager::DrawImGui() {
     if (ImGui::Button("Reset")) {
         if (dataJson_->Reset(*data_)) {
             // defaultの設定でシールドを再初期化
-            shield_.Initialize(data_->shield);
+            shield_.Initialize(data_->shield, camera_);
         }
     }
     ImGui::EndDisabled();

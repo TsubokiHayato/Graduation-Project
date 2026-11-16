@@ -27,7 +27,7 @@ void OnoderaScene::Initialize() {
 	equipmentDataJson_ = std::make_unique<EquipmentDataJson>();
 	equipmentDataJson_->Load(equipmentData_);
 	// EquipmentManager初期化
-	EquipmentManager::GetInstance()->Initialize(equipmentData_, equipmentDataJson_.get());
+	EquipmentManager::GetInstance()->Initialize(equipmentData_, equipmentDataJson_.get(), camera_.get());
 }
 
 // =============================================================================
@@ -36,7 +36,7 @@ void OnoderaScene::Initialize() {
 void OnoderaScene::Update() {
 	camera_->Update();
 
-	// 装備更新処理
+	// 装備管理更新処理
 	EquipmentManager::GetInstance()->Update(player_->GetEnergyOutput()->GetShieldOutputRate());
 
 	// プレイヤ―更新処理
@@ -49,6 +49,9 @@ void OnoderaScene::Update() {
 //  描画フェーズ
 // =============================================================================
 void OnoderaScene::Object3DDraw() {
+	// 装備管理描画
+	EquipmentManager::GetInstance()->Draw();
+
 	// プレイヤ―描画処理
 	player_->Draw();
 }
@@ -65,6 +68,8 @@ void OnoderaScene::ParticleDraw() {}
 void OnoderaScene::ImGuiDraw() {
 #ifdef USE_IMGUI
 	player_->DrawImGui();
+	//シールドオブジェクトの設定
+	EquipmentManager::GetInstance()->GetShield()->GetShieldObject()->DrawImGui("Shield Object");
 
 	if (ImGui::Begin("Equipment")) {
 		EquipmentManager::GetInstance()->DrawImGui();
@@ -85,4 +90,6 @@ void OnoderaScene::Finalize() {
 	// TextManager はシングルトンでシーンを越えて生存するため、退場時に片付ける。
 	TextManager::GetInstance()->ClearAllTexts();
 	TextManager::GetInstance()->ClearAllSprites();
+	// EquipmentManager はシングルトンでシーンを越えて生存するため、退場時に片付ける。
+	EquipmentManager::GetInstance()->Finalize();
 }

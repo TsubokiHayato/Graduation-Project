@@ -7,19 +7,20 @@
 // =========================================
 class Shield {
 public:
-    // 初期化
-    void Initialize(const ShieldData& data);
-    // 更新
+    // 初期化処理
+    void Initialize(const ShieldData& data, TuboEngine::Camera* camera);
+    // 更新処理
     void Update();
+    // 描画処理
+    void Draw();
+    // ImGui
+    void DrawImGui();
     // ダメージ処理
     float TakeDamage(float damage);
     // リチャージ処理
     void UpdateRecharge(float deltaTime);
-    // ImGui
-    void DrawImGui();
     // シールド出力率設定
     void SetOutputRate(float outputRate);
-
 private:
     // シールドデータ
     ShieldData data_{};
@@ -32,6 +33,8 @@ private:
     // ImGuiで設定編集中かどうかの変数
     bool isediting_;
 public:
+    // シールドオブジェクト取得
+    TuboEngine::Object3d* GetShieldObject() const { return object_.get(); }
     // シールドが動作中かどうか
     bool IsBusy() const { return data_.shield < data_.maxshield || isrecharging_ || rechargetimer_ > 0.0f; }
     // ImGuiで設定編集中かどうか

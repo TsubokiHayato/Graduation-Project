@@ -9,19 +9,20 @@ using namespace TuboEngine;
 // =========================================
 // Initialize
 // =========================================
-void Shield::Initialize(const ShieldData& data) {
+void Shield::Initialize(const ShieldData& data, TuboEngine::Camera* camera) {
     data_ = data;
     // 初期状態では基準最大値をそのまま使用
     effectivemaxshield_ = data.maxshield;
     rechargetimer_ = 0.0f;
-    isrecharging_ = false; 
+    isrecharging_ = false;
     isediting_ = false;
     // 現在値を最大値以内に収める
     data_.shield = std::clamp(data_.shield, 0.0f, effectivemaxshield_);
-   // object_ = std::make_unique<Object3d>();
-   // object_->Initialize("block/block.obj");
-    //object_->SetCamera(camera);
 
+    // シールドオブジェクトの生成、初期化
+    object_ = std::make_unique<Object3d>();
+    object_->Initialize("block/block.obj");
+    object_->SetCamera(camera);
 }
 
 // =========================================
@@ -34,6 +35,16 @@ void Shield::Update() {
     }
     constexpr float kDeltaTime = 1.0f / 60.0f;
     UpdateRecharge(kDeltaTime);
+
+
+    object_->Update();
+}
+
+// =========================================
+// Draw
+// =========================================
+void Shield::Draw() {
+    object_->Draw();
 }
 
 // =========================================
@@ -104,15 +115,11 @@ void Shield::SetOutputRate(float outputRate) {
 void Shield::DrawImGui() {
 #ifdef USE_IMGUI
     ImGui::SeparatorText("Shield");
-
     ImGui::Text("Shield : %.1f / %.1f", data_.shield, effectivemaxshield_);
-
     float shieldRate = 0.0f;
     if (effectivemaxshield_ > 0.0f) {
         shieldRate = data_.shield / effectivemaxshield_;
     }
-
-
     // シールドゲージ（青色）
     ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(60.0f / 255.0f, 140.0f / 255.0f, 255.0f / 255.0f, 1.0f));
     ImGui::ProgressBar(shieldRate, ImVec2(-1.0f, 0.0f));
