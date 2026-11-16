@@ -9,9 +9,11 @@
 // =========================================
 void Shield::Initialize(const ShieldData& data) {
     data_ = data;
+    // 100%時の基準最大シールド量を保存
+    baseMaxShield_ = data.maxshield;
+
     rechargeTimer_ = 0.0f;
     isRecharging_ = false;
-
     // 現在値を最大値以内に収める
     data_.shield = std::clamp(data_.shield, 0.0f, data_.maxshield);
 }
@@ -67,6 +69,18 @@ void Shield::UpdateRecharge(float deltaTime) {
     data_.shield += data_.rechargerate * deltaTime;
 
     // 最大値を超えないようにする
+    data_.shield = std::min(data_.shield, data_.maxshield);
+}
+
+// =========================================
+// シールド出力率設定
+// =========================================
+void Shield::SetOutputRate(float outputRate) {
+    // 出力率を0.0～1.0に制限
+    outputRate = std::clamp(outputRate, 0.0f, 1.0f);
+    // 出力率に応じて最大シールド量を変更
+    data_.maxshield = baseMaxShield_ * outputRate;
+    // 現在のシールド量が最大値を超えないようにする
     data_.shield = std::min(data_.shield, data_.maxshield);
 }
 

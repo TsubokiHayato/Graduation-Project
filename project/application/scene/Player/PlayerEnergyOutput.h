@@ -18,4 +18,6 @@ public:
     const PlayerEnergyData& GetEnergyData() const { return energyData_; }
 	// ブースター出力率取得（0.0～1.0）
     float GetBoosterOutputRate() const { return energyData_.booster / 100.0f; }
+    // シールド出力率取得（0.0～1.0）
+    float GetShieldOutputRate() const { return energyData_.shield / 100.0f; }
 };

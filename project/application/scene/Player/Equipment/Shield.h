@@ -15,12 +15,15 @@ public:
     void UpdateRecharge(float deltaTime);
     // ImGui
     void DrawImGui();
+    // シールド出力率設定
+    void SetOutputRate(float outputRate);
+
 private:
     ShieldData data_{};
-
+    float baseMaxShield_;
     // リチャージ関連
-    float rechargeTimer_ = 0.0f;
-    bool isRecharging_ = false;
+    float rechargeTimer_;
+    bool isRecharging_;
 public:
     float GetCurrentShield() const { return data_.shield; }
     float GetMaxShield() const { return data_.maxshield; }

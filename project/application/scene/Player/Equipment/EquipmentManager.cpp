@@ -6,7 +6,11 @@ void EquipmentManager::Initialize(const EquipmentData& data) {
 }
 
 // 更新
-void EquipmentManager::Update() {
+void EquipmentManager::Update(float shieldOutputRate) {
+    // シールド出力率を反映
+    shield_.SetOutputRate(shieldOutputRate);
+
+    // シールド更新
     shield_.Update();
 }
 

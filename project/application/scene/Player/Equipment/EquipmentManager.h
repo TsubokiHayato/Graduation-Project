@@ -9,7 +9,7 @@ public:
     void Initialize(const EquipmentData& data);
 
     // 更新
-    void Update();
+    void Update(float shieldOutputRate);
 
     // ダメージ処理
     void TakeDamage(float damage, PlayerHP& hp, PlayerState& state);

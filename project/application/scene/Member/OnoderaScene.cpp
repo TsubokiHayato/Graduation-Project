@@ -39,8 +39,9 @@ void OnoderaScene::Update() {
 
 	// プレイヤ―更新処理
 	player_->Update();
-	// 装備更新
-	equipmentManager_->Update();
+
+	// 装備更新処理
+	equipmentManager_->Update(player_->GetEnergyOutput()->GetShieldOutputRate());
 
 	TextManager::GetInstance()->UpdateAll();
 }
