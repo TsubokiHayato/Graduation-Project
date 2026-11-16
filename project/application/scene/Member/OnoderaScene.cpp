@@ -21,6 +21,14 @@ void OnoderaScene::Initialize() {
 	// プレイヤ―の生成、初期化処理
 	player_ = std::make_unique<Player>();
 	player_->Initialize(camera_.get());
+
+	// 装備データ読み込み
+	equipmentDataJson_ = std::make_unique<EquipmentDataJson>();
+	equipmentDataJson_->Load(equipmentData_);
+
+	// EquipmentManager生成・初期化
+	equipmentManager_ = std::make_unique<EquipmentManager>();
+	equipmentManager_->Initialize(equipmentData_);
 }
 
 // =============================================================================
@@ -31,6 +39,8 @@ void OnoderaScene::Update() {
 
 	// プレイヤ―更新処理
 	player_->Update();
+	// 装備更新
+	equipmentManager_->Update();
 
 	TextManager::GetInstance()->UpdateAll();
 }
@@ -55,6 +65,15 @@ void OnoderaScene::ParticleDraw() {}
 void OnoderaScene::ImGuiDraw() {
 #ifdef USE_IMGUI
 	player_->DrawImGui();
+	if (ImGui::Begin("Equipment")) {
+		equipmentManager_->DrawImGui();
+		// 動作確認用のダメージボタン
+		if (ImGui::Button("Test Damage (50)")) {
+			equipmentManager_->TakeDamage(50.0f, *player_->GetHP(), player_->GetState());
+		}
+
+	}
+	ImGui::End();
 
 #endif
 }

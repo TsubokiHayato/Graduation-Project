@@ -1,0 +1,16 @@
+{
+  "default": {
+    "shield": {
+      "basemaxshield": 1000.0,
+      "rechargedelay": 3.0,
+      "rechargerate": 100.0
+    }
+  },
+  "current": {
+    "shield": {
+      "basemaxshield": 1000.0,
+      "rechargedelay": 3.0,
+      "rechargerate": 100.0
+    }
+  }
+}
