@@ -45,7 +45,6 @@ private:
     static double Round3(float value) { return std::round(static_cast<double>(value) * 1000.0) / 1000.0; }
 };
 
-
 // =========================================
 // シールドデータのJSON変換
 // =========================================

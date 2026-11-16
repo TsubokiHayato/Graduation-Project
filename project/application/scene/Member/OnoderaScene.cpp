@@ -25,10 +25,9 @@ void OnoderaScene::Initialize() {
 	// 装備データ読み込み
 	equipmentDataJson_ = std::make_unique<EquipmentDataJson>();
 	equipmentDataJson_->Load(equipmentData_);
-
 	// EquipmentManager生成・初期化
 	equipmentManager_ = std::make_unique<EquipmentManager>();
-	equipmentManager_->Initialize(equipmentData_);
+	equipmentManager_->Initialize(equipmentData_, equipmentDataJson_.get());
 }
 
 // =============================================================================
@@ -66,6 +65,7 @@ void OnoderaScene::ParticleDraw() {}
 void OnoderaScene::ImGuiDraw() {
 #ifdef USE_IMGUI
 	player_->DrawImGui();
+
 	if (ImGui::Begin("Equipment")) {
 		equipmentManager_->DrawImGui();
 		// 動作確認用のダメージボタン

@@ -51,14 +51,9 @@ bool EquipmentDataJson::Save(const EquipmentData& data) {
 }
 
 // =============================================================================
-// 初期値(default)に戻す
+// 初期値に戻す
 // =============================================================================
 bool EquipmentDataJson::Reset(EquipmentData& data) {
-    // currentが存在しない場合は実行しない
-    if (!hasCurrent_) {
-        return false;
-    }
-
     // defaultをcurrentに反映
     jsonData_.currentData = jsonData_.defaultData;
     // データに反映
