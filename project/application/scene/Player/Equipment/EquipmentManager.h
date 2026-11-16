@@ -8,6 +8,22 @@
 // プレイヤ―の装備管理クラス
 // =========================================
 class EquipmentManager {
+private:    
+    // シングルトンパターン
+    // シングルトンインスタンス
+    static EquipmentManager* instance_;
+    // コピー・代入を禁止
+    EquipmentManager(const EquipmentManager&) = delete;
+    EquipmentManager& operator=(const EquipmentManager&) = delete;
+public:
+    // コンストラクタ
+    EquipmentManager() = default;
+    // デストラクタ
+    ~EquipmentManager() = default;
+    // シングルトンインスタンスの取得
+    static EquipmentManager* GetInstance();
+    // シングルトンの終了処理
+    static void Finalize();
 public:
     // 初期化
     void Initialize(EquipmentData& data, EquipmentDataJson* dataJson);

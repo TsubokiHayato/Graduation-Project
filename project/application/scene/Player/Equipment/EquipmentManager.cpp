@@ -3,6 +3,29 @@
 #include "externals/imgui/imgui.h"
 #endif
 
+// シングルトン用インスタンス
+EquipmentManager* EquipmentManager::instance_ = nullptr;
+
+// =========================================
+// シングルトンインスタンスの取得
+// =========================================
+EquipmentManager* EquipmentManager::GetInstance() {
+    // まだインスタンスが生成されていなければ作成
+    if (instance_ == nullptr) {
+        instance_ = new EquipmentManager;
+    }
+    return instance_;
+}
+
+// =========================================
+// 終了処理
+// =========================================
+void EquipmentManager::Finalize() {
+    // インスタンスを削除してnullptrに戻す
+    delete instance_;
+    instance_ = nullptr;
+}
+
 // =========================================
 // Initialize
 // =========================================
@@ -47,18 +70,19 @@ void EquipmentManager::DrawImGui() {
     // シールド設定
     shield_.DrawImGui();
 
-    ImGui::Separator();
-    // シールド動作中はSave・Resetを禁止
-    ImGui::BeginDisabled(shield_.IsBusy() || data_ == nullptr || dataJson_ == nullptr);
+    ImGui::Separator();    
+    // 設定編集中、またはデータ未初期化の場合はSave・Resetを禁止
+    bool disabled = shield_.IsEditing() || data_ == nullptr || dataJson_ == nullptr;
+    ImGui::BeginDisabled(disabled);
 
     // Save
     if (ImGui::Button("Save")) {
         // 現在のシールドデータを取得
         data_->shield = shield_.GetShieldData();
-        // 基準最大シールド量を保存
-        data_->shield.maxshield = shield_.GetMaxShield();
-        // 保存時はシールドを満タン状態として保存
+        // 保存時は現在のシールドを満タン状態にする
+        // maxshieldは基準最大値なので変更しない
         data_->shield.shield = data_->shield.maxshield;
+        // JSON保存
         dataJson_->Save(*data_);
     }
 

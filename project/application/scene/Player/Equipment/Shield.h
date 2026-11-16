@@ -1,5 +1,6 @@
 #pragma once
 #include "EquipmentData.h"
+#include "Object3d.h"
 
 // =========================================
 // シールドクラス
@@ -20,13 +21,16 @@ public:
     void SetOutputRate(float outputRate);
 
 private:
+    // シールドデータ
     ShieldData data_{};
-    float basemaxshield_;     // エネルギー出力率100%時の最大シールド量
+    // シールドオブジェクト本体
+    std::unique_ptr<TuboEngine::Object3d> object_;
+    float effectivemaxshield_;      // ブースター適用後の最大シールド値
     // リチャージ関連
-    float rechargetimer_;     // ダメージを受けてからの経過時間
-    bool isrecharging_;       // リチャージ中かどうか
+    float rechargetimer_;      // ダメージを受けてからの経過時間
+    bool isrecharging_;        // リチャージ中かどうか
     // ImGuiで設定編集中かどうかの変数
-    bool isediting_ = false;
+    bool isediting_;
 public:
     // シールドが動作中かどうか
     bool IsBusy() const { return data_.shield < data_.maxshield || isrecharging_ || rechargetimer_ > 0.0f; }
@@ -34,8 +38,10 @@ public:
     bool IsEditing() const { return isediting_; }
     // 現在のシールド耐久値を取得
     float GetCurrentShield() const { return data_.shield; }
-    // 現在の最大シールド耐久値を取得
-    float GetMaxShield() const { return data_.maxshield; }
+    // ブースター適用前の基準最大シールド耐久値を取得
+    float GetBaseMaxShield() const { return data_.maxshield; }
+    // ブースター適用後の最大シールド耐久値を取得
+    float GetMaxShield() const { return effectivemaxshield_; }
     // シールドが破壊されているかどうか
     bool IsBroken() const { return data_.shield <= 0.0f; }
     // 現在のシールド設定データを取得

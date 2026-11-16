@@ -4,6 +4,7 @@
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
 #endif
+#include "Player/Equipment/EquipmentManager.h"
 
 using namespace TuboEngine;
 
@@ -25,9 +26,8 @@ void OnoderaScene::Initialize() {
 	// 装備データ読み込み
 	equipmentDataJson_ = std::make_unique<EquipmentDataJson>();
 	equipmentDataJson_->Load(equipmentData_);
-	// EquipmentManager生成・初期化
-	equipmentManager_ = std::make_unique<EquipmentManager>();
-	equipmentManager_->Initialize(equipmentData_, equipmentDataJson_.get());
+	// EquipmentManager初期化
+	EquipmentManager::GetInstance()->Initialize(equipmentData_, equipmentDataJson_.get());
 }
 
 // =============================================================================
@@ -36,11 +36,11 @@ void OnoderaScene::Initialize() {
 void OnoderaScene::Update() {
 	camera_->Update();
 
+	// 装備更新処理
+	EquipmentManager::GetInstance()->Update(player_->GetEnergyOutput()->GetShieldOutputRate());
+
 	// プレイヤ―更新処理
 	player_->Update();
-
-	// 装備更新処理
-	equipmentManager_->Update(player_->GetEnergyOutput()->GetShieldOutputRate());
 
 	TextManager::GetInstance()->UpdateAll();
 }
@@ -67,12 +67,11 @@ void OnoderaScene::ImGuiDraw() {
 	player_->DrawImGui();
 
 	if (ImGui::Begin("Equipment")) {
-		equipmentManager_->DrawImGui();
+		EquipmentManager::GetInstance()->DrawImGui();
 		// 動作確認用のダメージボタン
 		if (ImGui::Button("Test Damage (50)")) {
-			equipmentManager_->TakeDamage(50.0f, *player_->GetHP(), player_->GetState());
+			EquipmentManager::GetInstance()->TakeDamage(50.0f, *player_->GetHP(), player_->GetState());
 		}
-
 	}
 	ImGui::End();
 

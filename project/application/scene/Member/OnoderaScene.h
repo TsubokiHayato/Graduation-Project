@@ -4,7 +4,6 @@
 #include "Object3d.h"
 #include <memory>
 #include "Player/Player.h"
-#include "Player/Equipment/EquipmentManager.h"
 #include "Player/Equipment/EquipmentDataJson.h"
 
 // Onodera 個人用の作業シーン
@@ -27,5 +26,4 @@ private:
 	// 装備
 	EquipmentData equipmentData_{};
 	std::unique_ptr<EquipmentDataJson> equipmentDataJson_;
-	std::unique_ptr<EquipmentManager> equipmentManager_;
 };
