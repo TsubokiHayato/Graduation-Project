@@ -1,5 +1,7 @@
 #include "PlayerMovement.h"
 #include "Input.h"
+#include <algorithm>
+#include <cmath>
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
 #endif
@@ -63,6 +65,17 @@ void PlayerMovement::Move(float booster) {
     // ブースター出力による移動速度の計算
     float movespeed = CalculateMoveSpeed(booster);
 
+    // ロックオン中：相手を基準に動く（W/S = 近づく/離れる、A/D = 周りを回る）
+    if (hasLockOn_) {
+        Math::Vector3 in = ReadMoveInput();
+        const float length = std::sqrt(in.x * in.x + in.z * in.z);
+        if (length > 0.0001f) {
+            // 斜め入力で速くならないように正規化
+            MoveAroundTarget(in.x / length * movespeed, in.z / length * movespeed);
+        }
+        return;
+    }
+
     Math::Vector3 pos = object_->GetPosition();
     if (input->PushKey(DIK_D)) pos.x += movespeed;
     if (input->PushKey(DIK_A)) pos.x -= movespeed;
@@ -86,13 +99,8 @@ void PlayerMovement::StartDash(float booster) {
         return;
     }
 
-    Input* input = Input::GetInstance();
-    Math::Vector3 direction{};
-    // WASDから方向を取得
-    if (input->PushKey(DIK_D)) direction.x += 1.0f;
-    if (input->PushKey(DIK_A)) direction.x -= 1.0f;
-    if (input->PushKey(DIK_W)) direction.z += 1.0f;
-    if (input->PushKey(DIK_S)) direction.z -= 1.0f;
+    // WASDから方向を取得（ロックオン中は「横・前後」の向きとして使う）
+    Math::Vector3 direction = ReadMoveInput();
 
     // 方向ベクトルの長さ
     float length = std::sqrt(direction.x * direction.x + direction.z * direction.z);
@@ -107,6 +115,9 @@ void PlayerMovement::StartDash(float booster) {
     direction.z /= length;
  
     dashDirection_ = direction;
+    // ロックオン中のダッシュは相手を中心に動く（横ダッシュで回り込み、後ろダッシュで距離を取る）
+    isLockOnDash_ = hasLockOn_;
+    dashInput_ = direction;
     // ダッシュ速度を計算
     dashSpeed_ = currentDashDistance_ / movedata_.dashduration;
     dashTimer_ = 0.0f;
@@ -131,10 +142,61 @@ void PlayerMovement::Dash(float deltaTime) {
     }
 
     // ダッシュ中の移動
+    const float step = dashSpeed_ * deltaTime;
+    // ロックオン中に始めたダッシュは、相手がいる間は相手を中心に動く
+    if (isLockOnDash_ && hasLockOn_) {
+        MoveAroundTarget(dashInput_.x * step, dashInput_.z * step);
+        return;
+    }
     Math::Vector3 position = object_->GetPosition();
-    position.x += dashDirection_.x * dashSpeed_ * deltaTime;
-    position.z += dashDirection_.z * dashSpeed_ * deltaTime;
+    position.x += dashDirection_.x * step;
+    position.z += dashDirection_.z * step;
     object_->SetPosition(position);
+}
+
+// =============================================================================
+// WASD 入力
+// =============================================================================
+Math::Vector3 PlayerMovement::ReadMoveInput() const {
+    Input* input = Input::GetInstance();
+    Math::Vector3 in{};
+    if (input->PushKey(DIK_D)) in.x += 1.0f;
+    if (input->PushKey(DIK_A)) in.x -= 1.0f;
+    if (input->PushKey(DIK_W)) in.z += 1.0f;
+    if (input->PushKey(DIK_S)) in.z -= 1.0f;
+    return in;
+}
+
+// =============================================================================
+// ロックオン相手を中心にした移動
+//  相手から見た「距離」と「角度」で位置を持ち、
+//  前後入力で距離、左右入力で角度を変える（まっすぐ横に動くと外へ膨らむため円周に沿わせる）
+// =============================================================================
+void PlayerMovement::MoveAroundTarget(float strafe, float forward) {
+    Math::Vector3 pos = object_->GetPosition();
+    float dx = pos.x - lockOnTarget_.x;
+    float dz = pos.z - lockOnTarget_.z;
+    float distance = std::sqrt(dx * dx + dz * dz);
+    if (distance < 0.0001f) {
+        // 相手と重なっているときは手前（-Z 側）にいることにする
+        dx = 0.0f;
+        dz = -1.0f;
+        distance = 0.0001f;
+    }
+
+    // 相手を中心とした角度（+Z が 0）
+    float angle = std::atan2(dx, dz);
+
+    // 前後：W で近づく。最小距離より内側には入らない（もともと内側にいる場合は押し出さない）
+    const float minDistance = (std::min)(minLockOnDistance_, distance);
+    const float newDistance = (std::max)(distance - forward, minDistance);
+
+    // 左右：円周に沿って回る。相手の方を向いたとき右(D)に動くと角度は減る
+    angle -= strafe / (std::max)(newDistance, 0.0001f);
+
+    pos.x = lockOnTarget_.x + std::sin(angle) * newDistance;
+    pos.z = lockOnTarget_.z + std::cos(angle) * newDistance;
+    object_->SetPosition(pos);
 }
 
 // =============================================================================

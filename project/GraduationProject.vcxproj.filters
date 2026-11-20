@@ -16,6 +16,12 @@
     <Filter Include="application\scene\Option">
       <UniqueIdentifier>{2263936b-38ac-4fc4-9f1b-9779a31074b5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="application\ui">
+      <UniqueIdentifier>{5b1e7c2a-3d4f-4a8e-9c61-2f7d8e0a4b13}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="application\scene\Game">
+      <UniqueIdentifier>{5b8e2f4a-7c1d-4e9a-b3f6-2d8c0a6e4f11}</UniqueIdentifier>
+    </Filter>
     <Filter Include="application\scene\Member">
       <UniqueIdentifier>{09b153f7-40cc-41a3-97cc-8cc43ae1aeab}</UniqueIdentifier>
     </Filter>
@@ -58,6 +64,12 @@
     </ClCompile>
     <ClCompile Include="application\scene\Member\TsubokiScene.cpp">
       <Filter>application\scene\Member</Filter>
+    </ClCompile>
+    <ClCompile Include="application\ui\Reticle.cpp">
+      <Filter>application\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Game\GameScene.cpp">
+      <Filter>application\scene\Game</Filter>
     </ClCompile>
     <ClCompile Include="application\scene\Member\MiyamotoScene.cpp">
       <Filter>application\scene\Member</Filter>
@@ -134,6 +146,12 @@
     </ClInclude>
     <ClInclude Include="application\scene\Member\TsubokiScene.h">
       <Filter>application\scene\Member</Filter>
+    </ClInclude>
+    <ClInclude Include="application\ui\Reticle.h">
+      <Filter>application\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Game\GameScene.h">
+      <Filter>application\scene\Game</Filter>
     </ClInclude>
     <ClInclude Include="application\scene\Member\MiyamotoScene.h">
       <Filter>application\scene\Member</Filter>

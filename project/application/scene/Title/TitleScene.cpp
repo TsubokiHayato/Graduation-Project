@@ -231,7 +231,7 @@ void TitleScene::DecideSelection() {
 	switch (selected_) {
 	case kMenuStart:
 		AudioManager::GetInstance()->PlayBgm("game.wav"); // ゲーム BGM へ切替
-		pendingScene_ = SAMPLE; // フェードアウト後にサンプルシーンへ（テンプレの遷移先）
+		pendingScene_ = GAME; // フェードアウト後に統合シーンへ
 		fadeScreen_->FadeOut();
 		break;
 	case kMenuOption:

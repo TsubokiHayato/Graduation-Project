@@ -104,7 +104,14 @@ void PlayerBooster::Update(float booster, bool isDashing) {
         ownerVelocity_ = delta / dt;
     }
 
-    if (isMoving_) {
+    if (hasFaceTarget_) {
+        // ロックオン中：移動方向に関係なく相手の方を向く（ゼルダの注目と同じ）
+        const float fx = faceTarget_.x - ownerPos.x;
+        const float fz = faceTarget_.z - ownerPos.z;
+        if (fx * fx + fz * fz > 0.0001f) {
+            yaw_ = LerpAngle(yaw_, std::atan2(fx, fz), yawFollow_);
+        }
+    } else if (isMoving_) {
         // +Z を 0 とした移動方向の角度
         const float targetYaw = std::atan2(delta.x, delta.z);
         yaw_ = LerpAngle(yaw_, targetYaw, yawFollow_);

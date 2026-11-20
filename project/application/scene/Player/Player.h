@@ -19,6 +19,8 @@ public:
     void Draw();
     // ImGui
     void DrawImGui();
+    // ダメージを受ける（無敵中・死亡中は無視。HP が 0 になると Dead になる）
+    void TakeDamage(float damage) { hp_->TakeDamage(damage, data_.state); }
 private:
     // プレイヤー本体
     std::unique_ptr<TuboEngine::Object3d> object_;

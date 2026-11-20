@@ -79,6 +79,8 @@ private:
     // 現在の状態
     // =========================================
     float yaw_ = 0.0f;        // ユニット全体の向き（移動方向, Y軸回転）
+    bool hasFaceTarget_ = false;              // 相手の方を向き続けるか（ロックオン中）
+    TuboEngine::Math::Vector3 faceTarget_{};  // 向く相手の位置
     float tilt_ = 0.0f;       // ノズルの傾き（X軸回転）
     bool isMoving_ = false;   // 移動中か
     bool isDashing_ = false;  // ダッシュ中か
@@ -145,6 +147,9 @@ public:
             if (e) { e->SetGround(true, height); }
         }
     }
+    // 向く相手を設定する（ロックオン中。移動方向ではなく相手の方を向き続ける）。毎フレーム Update の前に呼ぶ
+    void SetFaceTarget(const TuboEngine::Math::Vector3& target) { hasFaceTarget_ = true; faceTarget_ = target; }
+    void ClearFaceTarget() { hasFaceTarget_ = false; }
     // 現在の向き(Y軸回転)取得
     float GetYaw() const { return yaw_; }
     // 移動中か取得
