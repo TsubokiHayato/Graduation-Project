@@ -65,11 +65,11 @@
     <ClCompile Include="application\scene\Member\SatouScene.cpp">
       <Filter>application\scene\Member</Filter>
     </ClCompile>
-    <ClCompile Include="application\scene\Member\TsubokiScene.cpp">
-      <Filter>application\scene\Member</Filter>
-    </ClCompile>
     <ClCompile Include="application\ui\Reticle.cpp">
       <Filter>application\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Member\TsubokiScene.cpp">
+      <Filter>application\scene\Member</Filter>
     </ClCompile>
     <ClCompile Include="application\scene\Game\GameScene.cpp">
       <Filter>application\scene\Game</Filter>
@@ -156,11 +156,11 @@
     <ClInclude Include="application\scene\Member\SatouScene.h">
       <Filter>application\scene\Member</Filter>
     </ClInclude>
-    <ClInclude Include="application\scene\Member\TsubokiScene.h">
-      <Filter>application\scene\Member</Filter>
-    </ClInclude>
     <ClInclude Include="application\ui\Reticle.h">
       <Filter>application\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Member\TsubokiScene.h">
+      <Filter>application\scene\Member</Filter>
     </ClInclude>
     <ClInclude Include="application\scene\Game\GameScene.h">
       <Filter>application\scene\Game</Filter>
