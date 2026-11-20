@@ -1,5 +1,7 @@
 #include "PlayerMovement.h"
 #include "Input.h"
+#include <algorithm>
+#include <cmath>
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
 #endif
@@ -57,18 +59,86 @@ void PlayerMovement::Update(float booster) {
 
 // =============================================================================
 // 移動処理
+// ボスを中心に、左右で周りを回り込み、前後で近づく・離れる
 // =============================================================================
 void PlayerMovement::Move(float booster) {
     Input* input = Input::GetInstance();
     // ブースター出力による移動速度の計算
     float movespeed = CalculateMoveSpeed(booster);
 
+    // 入力方向（x = 左右、z = 前後。前 = ボスへ近づく）
+    float side = 0.0f;
+    float forward = 0.0f;
+    if (input->PushKey(DIK_D)) side += 1.0f;
+    if (input->PushKey(DIK_A)) side -= 1.0f;
+    if (input->PushKey(DIK_W)) forward += 1.0f;
+    if (input->PushKey(DIK_S)) forward -= 1.0f;
+
+    // 斜めは各成分を 1/√2 にする
+    if (side != 0.0f && forward != 0.0f) {
+        constexpr float kInvSqrt2 = 0.70710678f;
+        side *= kInvSqrt2;
+        forward *= kInvSqrt2;
+    }
+
+    // 前入力は距離を縮める
+    MoveOnOrbit(side * movespeed, -forward * movespeed);
+}
+
+// =============================================================================
+// 旋回の中心の設定
+// =============================================================================
+void PlayerMovement::SetOrbitCenter(const TuboEngine::Math::Vector3& center) {
+    orbitCenter_ = center;
+    // 初期位置（JSON）の高さに関係なく、すぐにボスと同じ地面に乗せる
     Math::Vector3 pos = object_->GetPosition();
-    if (input->PushKey(DIK_D)) pos.x += movespeed;
-    if (input->PushKey(DIK_A)) pos.x -= movespeed;
-    if (input->PushKey(DIK_S)) pos.z -= movespeed;
-    if (input->PushKey(DIK_W)) pos.z += movespeed;
+    pos.y = GetGroundedY();
     object_->SetPosition(pos);
+}
+
+// =============================================================================
+// 地面に乗る高さ
+// =============================================================================
+float PlayerMovement::GetGroundedY() const {
+    // モデル（block.obj）は高さ 2（-1〜1）なので、半分の高さ × スケール だけ持ち上げると底が地面に付く
+    // ボスも同じ block.obj を「中心の高さ + 1」に置いて地面に乗せている
+    constexpr float kModelHalfHeight = 1.0f;
+    return orbitCenter_.y + kModelHalfHeight * object_->GetScale().y;
+}
+
+// =============================================================================
+// 旋回移動の反映
+// =============================================================================
+void PlayerMovement::MoveOnOrbit(float tangential, float radial) {
+    Math::Vector3 pos = object_->GetPosition();
+
+    // 中心から見た現在の距離と角度
+    const float dx = pos.x - orbitCenter_.x;
+    const float dz = pos.z - orbitCenter_.z;
+    float distance = std::sqrt(dx * dx + dz * dz);
+    float angle = std::atan2(dz, dx);
+
+    // 中心に重なっているときは角度が決まらないので最小距離へ押し出す
+    if (distance < 0.0001f) {
+        distance = minDistance_;
+        angle = -1.5707963f;
+    }
+
+    // 周方向の移動量を角度に変換する（近いほど角度は速く変わる）
+    // 自機からボスを見て右に動くのは角度が増える向き
+    angle += tangential / distance;
+
+    // 距離を変えて、最小距離〜ステージ半径に収める
+    distance = std::clamp(distance + radial, minDistance_, (std::max)(minDistance_, maxDistance_));
+
+    pos.x = orbitCenter_.x + std::cos(angle) * distance;
+    pos.z = orbitCenter_.z + std::sin(angle) * distance;
+    pos.y = GetGroundedY(); // ボスと同じ地面に乗せる
+    object_->SetPosition(pos);
+
+    // 常にボスの方を向く（ボスと同じく yaw = π/2 - 向きの角度。向きの角度 = angle + π）
+    constexpr float kHalfPi = 1.5707963f;
+    object_->SetRotation({ 0.0f, -kHalfPi - angle, 0.0f });
 }
 
 // =============================================================================
@@ -88,7 +158,7 @@ void PlayerMovement::StartDash(float booster) {
 
     Input* input = Input::GetInstance();
     Math::Vector3 direction{};
-    // WASDから方向を取得
+    // WASDから方向を取得（x = 周方向、z = 距離方向。前 = ボスへ近づく）
     if (input->PushKey(DIK_D)) direction.x += 1.0f;
     if (input->PushKey(DIK_A)) direction.x -= 1.0f;
     if (input->PushKey(DIK_W)) direction.z += 1.0f;
@@ -105,7 +175,7 @@ void PlayerMovement::StartDash(float booster) {
     // 斜め方向の正規化
     direction.x /= length;
     direction.z /= length;
- 
+
     dashDirection_ = direction;
     // ダッシュ速度を計算
     dashSpeed_ = currentDashDistance_ / movedata_.dashduration;
@@ -130,11 +200,9 @@ void PlayerMovement::Dash(float deltaTime) {
         return;
     }
 
-    // ダッシュ中の移動
-    Math::Vector3 position = object_->GetPosition();
-    position.x += dashDirection_.x * dashSpeed_ * deltaTime;
-    position.z += dashDirection_.z * dashSpeed_ * deltaTime;
-    object_->SetPosition(position);
+    // ダッシュ中の移動（左右は周方向、前後は距離方向）
+    const float step = dashSpeed_ * deltaTime;
+    MoveOnOrbit(dashDirection_.x * step, -dashDirection_.z * step);
 }
 
 // =============================================================================
@@ -222,7 +290,7 @@ void PlayerMovement::DrawImGui(float booster) {
 // =============================================================================
 // 移動速度の計算
 // =============================================================================
-float PlayerMovement::CalculateMoveSpeed(float booster) const { 
-	// ブースター出力率に応じて移動速度を計算
+float PlayerMovement::CalculateMoveSpeed(float booster) const {
+    // ブースター出力率に応じて移動速度を計算
     return movedata_.maxspeed * booster;
 }

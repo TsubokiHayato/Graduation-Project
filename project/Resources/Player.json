@@ -1,22 +1,22 @@
 {
   "current": {
     "energy": {
-      "beam": 10.0,
-      "booster": 50.0,
-      "fight": 10.0,
+      "beam": 25.0,
+      "booster": 25.0,
+      "fight": 25.0,
       "maxenergy": 100.0,
-      "shield": 10.0
+      "shield": 25.0
     },
     "hp": {
       "currenthp": 100.0,
-      "invincibleduration": 0.1,
+      "invincibleduration": 1.0,
       "maxhp": 100.0
     },
     "movement": {
       "dashcooldown": 1.0,
       "dashduration": 0.1,
-      "maxdashdistance": 50.0,
-      "maxspeed": 0.5
+      "maxdashdistance": 30.0,
+      "maxspeed": 1.0
     },
     "state": 0,
     "transform": {

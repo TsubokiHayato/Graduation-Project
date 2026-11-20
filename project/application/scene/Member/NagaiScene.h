@@ -1,6 +1,7 @@
 #pragma once
 #include "IScene.h"
 #include "Camera.h"
+#include "UniversalCamera.h"
 #include "Object3d.h"
 #include "Boss/Boss.h"
 #include "Player/Player.h"
@@ -16,10 +17,14 @@ public:
 	void SpriteDraw() override;
 	void ImGuiDraw() override;
 	void ParticleDraw() override;
-	TuboEngine::Camera* GetMainCamera() const override { return camera_.get(); }
+	TuboEngine::Camera* GetMainCamera() const override { return camera_->GetCamera(); }
 
 private:
-	std::unique_ptr<TuboEngine::Camera> camera_;
+	// カメラのパラメータ設定
+	void SetupCamera();
+
+	// ボス → 自機 → カメラ が一直線に並ぶように自機を追従するカメラ
+	std::unique_ptr<TuboEngine::UniversalCamera> camera_;
 
 	// 座標軸（動作確認用。不要なら消してOK）
 	std::unique_ptr<TuboEngine::Object3d> axis_;
@@ -27,17 +32,8 @@ private:
 	// ---- ボス ----
 	std::unique_ptr<Boss> boss_;
 	float stageRadius_ = 20.0f; // ステージ半径（仮）
+	float minDistance_ = 2.0f;  // 自機がボスに近づける最小距離（仮）
 
+	// ---- 自機 ----
 	std::unique_ptr<Player> player_;
-
-	// ---- 動作確認用の仮の自機（距離と角度で位置を持つ） ----
-	std::unique_ptr<TuboEngine::Object3d> dummyPlayer_;
-	float playerDistance_ = 12.0f;    // ボスからの距離
-	float playerAngle_ = -1.5707963f; // ボスの周りの角度（ラジアン）。-π/2 でカメラ手前
-	float playerRadius_ = 0.5f;       // 自機の大きさ（当たり判定の半径）
-	float playerMaxHp_ = 100.0f;
-	float playerHp_ = 100.0f;
-	float shieldRatio_ = 0.0f;     // シールドの配分（0〜1）
-	float maxReduction_ = 0.8f;    // シールド100％時の軽減率（1未満）
-	float lastDamage_ = 0.0f;      // 直近に受けたダメージ（軽減後）
 };

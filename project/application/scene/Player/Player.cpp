@@ -14,7 +14,7 @@ void Player::Initialize(TuboEngine::Camera* camera) {
     object_ = std::make_unique<Object3d>();
     object_->Initialize("block/block.obj");
     object_->SetCamera(camera);
-  
+
     // プレイヤ―のJsonデータ読み込みクラスの生成
     dataJson_ = std::make_unique<PlayerDataJson>();
 
@@ -48,6 +48,18 @@ void Player::Update() {
 
     // モデル更新
     object_->Update();
+}
+
+// =========================================
+// TakeDamage
+// =========================================
+void Player::TakeDamage(float damage) {
+    // ダッシュ中は無敵
+    if (movement_->IsDashing()) {
+        return;
+    }
+    // 無敵時間・死亡状態の判定は HP クラス側で行う
+    hp_->TakeDamage(damage, data_.state);
 }
 
 // =========================================
@@ -115,13 +127,13 @@ void Player::DrawImGui() {
     // エネルギー管理クラスのimgui
     energyoutput_->DrawImGui();
     ImGui::Separator();
-    
+
     // HPのimui
     hp_->DrawImGui(data_.state);
     ImGui::Separator();
 
     // 移動処理関連のimgui
-	movement_->DrawImGui(energyoutput_->GetBoosterOutputRate());   
+    movement_->DrawImGui(energyoutput_->GetBoosterOutputRate());
 
     ImGui::EndDisabled();
 #endif

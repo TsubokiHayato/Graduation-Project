@@ -19,6 +19,12 @@ public:
     void Draw();
     // ImGui
     void DrawImGui();
+    // 被弾処理（ボスの攻撃が当たったときに呼ぶ）。ダッシュ中・無敵中・死亡中は受けない
+    void TakeDamage(float damage);
+    // 旋回の中心（ボスの位置）を設定
+    void SetOrbitCenter(const TuboEngine::Math::Vector3& center) { movement_->SetOrbitCenter(center); }
+    // ボスからの距離の範囲（最小距離〜ステージ半径）を設定
+    void SetDistanceRange(float minDistance, float maxDistance) { movement_->SetDistanceRange(minDistance, maxDistance); }
 private:
     // プレイヤー本体
     std::unique_ptr<TuboEngine::Object3d> object_;
@@ -46,4 +52,8 @@ public:
     PlayerMovement* GetMovement() const { return movement_.get(); }
     // HP管理クラス取得
     PlayerHP* GetHP() const { return hp_.get(); }
+    // 現在位置取得
+    TuboEngine::Math::Vector3 GetPosition() const { return object_->GetPosition(); }
+    // 当たり判定の半径取得（Transform の scale.x を半径として扱う）
+    float GetRadius() const { return data_.transform.scale.x; }
 };
