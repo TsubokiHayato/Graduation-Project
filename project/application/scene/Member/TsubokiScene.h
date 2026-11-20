@@ -5,6 +5,8 @@
 #include "Object3d.h"
 #include "Animator.h"
 #include "AnimatorController.h"
+#include "Player/Player.h"
+#include "Player/PlayerBooster.h"
 #include <memory>
 
 class TsubokiScene : public IScene {
@@ -20,9 +22,9 @@ public:
 
 private:
 	/// <summary>
-	/// 入力からキャラクターを移動・旋回させ、状態に合わせてアニメーションを切り替える
+	/// 人形（アニメーション確認用）のアニメーションを切り替える。移動はしない
 	/// </summary>
-	void UpdateCharacter();
+	void UpdateHumanPreview();
 
 	/// <summary>
 	/// 歩きアニメーションから待機ポーズ（1フレームのアニメーション）を作る
@@ -36,19 +38,20 @@ private:
 	std::unique_ptr<TuboEngine::Object3d> axis_;
 	std::unique_ptr<TuboEngine::Object3d> ground_;
 
-	// 人型キャラクター（スキニング）
+	// プレイヤー（WASD で移動。カメラはこちらを追従する）
+	std::unique_ptr<Player> player_;
+
+	// 人形（スキニング）。アニメーション確認用でその場に置いておく
 	std::unique_ptr<TuboEngine::Animator> human_;
-	TuboEngine::Math::Vector3 position_ = {0.0f, 0.0f, 0.0f};
-	float yaw_ = 0.0f;            // 向き（Y軸回転、ラジアン）
 	float modelScale_ = 2.0f;     // 元モデルは身長約1m
-	// 移動速度（m/秒）。足が滑らないよう各アニメーションの歩幅に合わせてある
-	float walkSpeed_ = 1.7f;
-	float sneakSpeed_ = 2.4f;
-	float turnSpeed_ = 10.0f;     // 旋回の追従の速さ
 	float blendTime_ = 0.2f;      // アニメーション切り替えのクロスフェード時間（秒）
+	// アニメーション確認用の入力（ImGui で切り替える）
+	bool previewMoving_ = false;
+	bool previewSneak_ = false;
 	// アニメーションの状態遷移（Idle / Walk / SneakWalk）。条件は Initialize で登録
 	TuboEngine::AnimatorController animController_;
 	bool showHandMarker_ = false; // 右手の位置に球を表示する（ボーン位置取得の確認用）
 
-	// カメラ（キャラクターからの相対位置）
+	// プレイヤー背中のバーニアノズル（移動方向に合わせて回転する）
+	std::unique_ptr<PlayerBooster> booster_;
 };

@@ -17,12 +17,15 @@
 using namespace TuboEngine;
 
 namespace {
-constexpr float kPi = std::numbers::pi_v<float>;
 
 // human モデル（Mixamo のボーン名）
 const char* const kHipsJoint = "mixamorig:Hips";
 const char* const kLeftFootJoint = "mixamorig:LeftFoot";
 const char* const kRightFootJoint = "mixamorig:RightFoot";
+// 地面（ground）の高さ
+constexpr float kGroundHeight = 0.0f;
+// プレイヤー（block.obj は 2x2x2 の箱）の中心から足元までの高さ
+constexpr float kPlayerHalfHeight = 1.0f;
 // 待機ポーズを作るときに使う walk の位置（周期に対する割合）。ここと半周期後で足が前後対称になる
 constexpr float kIdlePhase = 0.27f;
 
@@ -42,7 +45,16 @@ float LowerFootHeight(const Skeleton& skeleton) {
 void TsubokiScene::Initialize() {
 	// ※ Camera はグローバルにも前方宣言があるため TuboEngine:: を明示する。
 	camera_ = std::make_unique<TuboEngine::UniversalCamera>();
-	camera_->LoadPresets("Resources/Camera/presets.json", /*logIfMissing*/ false); // ImGui で調整して Save したもの（無ければ初期値）
+	// ImGui で調整して Save したプリセットがあればそれを使う
+	if (!camera_->LoadPresets("Resources/Camera/presets.json", /*logIfMissing*/ false)) {
+		// 保存が無いときの初期値。エンジンの初期値は身長約2mの人形を肩越しに映す近さなので、
+		// 2x2x2 の箱のプレイヤーだと画面が箱で埋まり、背中のノズルと噴射が見えない。引いて広めに映す
+		auto& behind = camera_->GetPreset(TuboEngine::UniversalCamera::ViewMode::Behind);
+		behind.distance = 16.0f;
+		behind.pitchDeg = 22.0f;
+		behind.lookHeight = 1.0f;
+		behind.fovDeg = 35.0f;
+	}
 
 	axis_ = std::make_unique<Object3d>();
 	axis_->Initialize("axis/axis.obj");
@@ -53,11 +65,23 @@ void TsubokiScene::Initialize() {
 	ground_->Initialize("tile/tile30x30.obj");
 	ground_->SetCamera(camera_->GetCamera());
 
-	// 人型キャラクター。walk.gltf と sneakWalk.gltf はアニメーション名が同じなので名前を付けて登録する
+	// プレイヤー（移動とカメラ追従の対象）
+	player_ = std::make_unique<Player>();
+	player_->Initialize(camera_->GetCamera());
+	// Player.json の初期位置は y=-2 で、このシーンの地面(y=0)に埋まるため、箱(2x2x2)の底が地面に付く高さに置く
+	{
+		TuboEngine::Object3d* playerObject = player_->GetPlayerObject();
+		TuboEngine::Math::Vector3 pos = playerObject->GetPosition();
+		pos.y = kGroundHeight + kPlayerHalfHeight;
+		playerObject->SetPosition(pos);
+	}
+
+	// 人形（アニメーション確認用）。walk.gltf と sneakWalk.gltf はアニメーション名が同じなので名前を付けて登録する
 	human_ = std::make_unique<Animator>();
 	human_->Initialize("human/walk.gltf");
 	human_->SetCamera(camera_->GetCamera());
 	human_->SetScale({modelScale_, modelScale_, modelScale_});
+	human_->SetPosition({4.0f, 0.0f, 0.0f}); // プレイヤーと重ならない位置（エディタで保存した位置があればそちらを使う）
 	human_->AddAnimation("Walk", "human/walk.gltf");
 	human_->AddAnimation("SneakWalk", "human/sneakWalk.gltf");
 	human_->AddAnimation("Idle", CreateIdlePose());
@@ -77,10 +101,26 @@ void TsubokiScene::Initialize() {
 	SceneSaveData::Apply("axis", axis_.get());
 	SceneSaveData::Apply("ground", ground_.get());
 
-	// カメラの追従対象（名前で登録し、ImGui で切り替えられる）。axis はロックオンの練習用
-	camera_->AddTarget("human", [this] { return position_; }, [this] { return yaw_; });
+	// プレイヤー背中のバーニアノズル（block は 2x2x2 の箱なので、背面 z=-1 にノズル先端を付ける）
+	booster_ = std::make_unique<PlayerBooster>();
+	booster_->SetMountOffset(0, { 0.6f, 0.3f, -1.0f}); // 右
+	booster_->SetMountOffset(1, {-0.6f, 0.3f, -1.0f}); // 左
+	booster_->Initialize(player_->GetPlayerObject(), camera_->GetCamera());
+	booster_->SetGroundHeight(kGroundHeight);
+
+	// カメラの追従対象（名前で登録し、ImGui で切り替えられる）
+	// player は向きを渡さない：WASD はワールド軸で動くので、カメラが回ると操作方向と画面がずれるため
+	// human はアニメーション確認時に寄って見る用、axis はロックオンの練習用
+	// カメラのプリセットは human（足元基準・身長約2m）と共用なので、player も足元の位置を渡す。
+	// 箱の中心を渡すと注視点が高くなりすぎ、背中のノズルと噴射が画面の下に切れてしまう
+	camera_->AddTarget("player", [this] {
+		TuboEngine::Math::Vector3 pos = player_->GetPlayerObject()->GetPosition();
+		pos.y -= kPlayerHalfHeight;
+		return pos;
+	});
+	camera_->AddTarget("human", [this] { return human_->GetPosition(); }, [this] { return human_->GetRotation().y; });
 	camera_->AddTarget("axis", [this] { return axis_->GetPosition(); });
-	camera_->SetTarget("human", 0.0f);
+	camera_->SetTarget("player", 0.0f);
 	camera_->SetViewMode(TuboEngine::UniversalCamera::ViewMode::Behind, 0.0f);
 	camera_->Update(0.0f);
 }
@@ -118,7 +158,20 @@ TuboEngine::Animation TsubokiScene::CreateIdlePose() const {
 //  Update
 // =============================================================================
 void TsubokiScene::Update() {
-	UpdateCharacter();
+	// プレイヤーの移動（WASD / Space でダッシュ）
+	player_->Update();
+	// ノズルはプレイヤーを動かした後に更新する
+	// 出力はエネルギー配分、ダッシュ開始の瞬間にバーストを出す
+	booster_->Update(player_->GetEnergyOutput()->GetBoosterOutputRate(), player_->GetMovement()->IsDashing());
+	// プレイヤー本体を移動方向に向ける（ノズルが常に背中側に来るように）
+	// Player::Update で行列は更新済みなので、向きを反映するためもう一度更新する
+	TuboEngine::Object3d* playerObject = player_->GetPlayerObject();
+	TuboEngine::Math::Vector3 playerRotate = playerObject->GetRotation();
+	playerRotate.y = booster_->GetYaw();
+	playerObject->SetRotation(playerRotate);
+	playerObject->Update();
+
+	UpdateHumanPreview();
 
 	// Q でロックオン切り替え（相手は axis）
 	if (Input::GetInstance()->TriggerKey(DIK_Q)) {
@@ -142,54 +195,14 @@ void TsubokiScene::Update() {
 	TextManager::GetInstance()->UpdateAll();
 }
 
-void TsubokiScene::UpdateCharacter() {
-	Input* input = Input::GetInstance();
-
-	// 入力（WASD / 十字キー / 左スティック）
-	Math::Vector3 move = {0.0f, 0.0f, 0.0f};
-	if (input->PushKey(DIK_W) || input->PushKey(DIK_UP)) { move.z += 1.0f; }
-	if (input->PushKey(DIK_S) || input->PushKey(DIK_DOWN)) { move.z -= 1.0f; }
-	if (input->PushKey(DIK_D) || input->PushKey(DIK_RIGHT)) { move.x += 1.0f; }
-	if (input->PushKey(DIK_A) || input->PushKey(DIK_LEFT)) { move.x -= 1.0f; }
-	// Shift / パッドの A ボタンでしのび足
-	bool sneak = input->PushKey(DIK_LSHIFT) || input->PushKey(DIK_RSHIFT);
-
-	XINPUT_STATE pad{};
-	if (input->GetJoystickState(0, pad)) {
-		float lx = pad.Gamepad.sThumbLX / 32767.0f;
-		float ly = pad.Gamepad.sThumbLY / 32767.0f;
-		if (std::sqrt(lx * lx + ly * ly) > 0.25f) { // デッドゾーン
-			move.x += lx;
-			move.z += ly;
-		}
-		sneak = sneak || (pad.Gamepad.wButtons & XINPUT_GAMEPAD_A);
-	}
-
-	float length = std::sqrt(move.x * move.x + move.z * move.z);
-	bool isMoving = length > 0.0f;
-
-	if (isMoving) {
-		// 斜め移動が速くならないよう正規化
-		move.x /= (std::max)(length, 1.0f);
-		move.z /= (std::max)(length, 1.0f);
-		float speed = sneak ? sneakSpeed_ : walkSpeed_;
-		position_.x += move.x * speed * TuboEngine::Time::DeltaTime();
-		position_.z += move.z * speed * TuboEngine::Time::DeltaTime();
-
-		// 進行方向へなめらかに向く（最短方向に回る）
-		float targetYaw = std::atan2(move.x, move.z);
-		float diff = std::remainder(targetYaw - yaw_, 2.0f * kPi);
-		yaw_ += diff * (std::min)(turnSpeed_ * TuboEngine::Time::DeltaTime(), 1.0f);
-	}
-
+void TsubokiScene::UpdateHumanPreview() {
+	// 人形は移動させず、ImGui のチェックで状態を切り替えてアニメーションを確認する
 	// 状態の切り替えは AnimatorController に任せる（条件は Initialize で登録）
-	animController_.SetBool("moving", isMoving);
-	animController_.SetBool("sneak", sneak);
+	animController_.SetBool("moving", previewMoving_);
+	animController_.SetBool("sneak", previewSneak_);
 	animController_.SetDefaultBlendTime(blendTime_);
 	animController_.Update(*human_);
 
-	human_->SetPosition(position_);
-	human_->SetRotation({0.0f, yaw_, 0.0f});
 	human_->SetScale({modelScale_, modelScale_, modelScale_});
 }
 
@@ -199,6 +212,9 @@ void TsubokiScene::UpdateCharacter() {
 void TsubokiScene::Object3DDraw() {
 	ground_->Draw();
 	axis_->Draw();
+	// プレイヤーとノズルは通常のPSOで描くので、スキニング用に切り替える前に描画する
+	player_->Draw();
+	booster_->Draw();
 
 	// スキニングするモデルは専用PSOに切り替えてから描画する（以降の3D描画もスキニング用になるので最後に描く）
 	TuboEngine::Object3dCommon::GetInstance()->DrawSettingsSkinning();
@@ -209,7 +225,10 @@ void TsubokiScene::SpriteDraw() {
 	TextManager::GetInstance()->DrawAll();
 }
 
-void TsubokiScene::ParticleDraw() {}
+void TsubokiScene::ParticleDraw() {
+	// ブースターの噴射（描画設定はフレームワーク側で済んでいる）
+	booster_->DrawParticles();
+}
 
 // =============================================================================
 //  ImGui（Debug ビルドのみ）
@@ -217,6 +236,7 @@ void TsubokiScene::ParticleDraw() {}
 void TsubokiScene::ImGuiDraw() {
 #ifdef USE_IMGUI
 	// Hierarchy / Inspector / Timeline に出す（クリックで選択 → Gizmo で移動・キーフレーム作成）
+	player_->DrawImGui();
 	TuboEngine::Editor::Inspect("human", human_.get());
 	camera_->DrawImGui(); // UniversalCamera の操作画面（Hierarchy にも "Camera" が出る）
 	TuboEngine::Editor::Inspect("axis", axis_.get());
@@ -227,16 +247,20 @@ void TsubokiScene::ImGuiDraw() {
 
 	ImGui::Begin("Human");
 	ImGui::Separator();
-	ImGui::Text("Controller  (WASD: 移動 / Shift: しのび足 / Q: ロックオン)");
+	ImGui::Text("Animation Preview  (プレイヤー操作: WASD 移動 / Space ダッシュ / Q ロックオン)");
 	ImGui::Text("State: %s", animController_.GetCurrentState().c_str());
+	ImGui::Checkbox("Moving", &previewMoving_);
+	ImGui::SameLine();
+	ImGui::Checkbox("Sneak", &previewSneak_);
 	ImGui::Checkbox("右手の位置を表示", &showHandMarker_);
 	ImGui::DragFloat("Model Scale", &modelScale_, 0.01f, 0.1f, 10.0f);
-	ImGui::DragFloat("Walk Speed", &walkSpeed_, 0.05f, 0.0f, 10.0f);
-	ImGui::DragFloat("Sneak Speed", &sneakSpeed_, 0.05f, 0.0f, 10.0f);
-	ImGui::DragFloat("Turn Speed", &turnSpeed_, 0.1f, 0.0f, 30.0f);
 	ImGui::DragFloat("Blend Time", &blendTime_, 0.01f, 0.0f, 1.0f);
 	ImGui::End();
 	animController_.DrawImGui("Human");
+
+	ImGui::Begin("Booster");
+	booster_->DrawImGui();
+	ImGui::End();
 #endif
 }
 
