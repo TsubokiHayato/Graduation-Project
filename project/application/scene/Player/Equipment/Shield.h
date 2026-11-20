@@ -23,6 +23,11 @@ public:
     void SetOutputRate(float outputRate);
     // 設定データを反映（オブジェクトは再生成しない）
     void ApplySettings(const ShieldData& data);
+
+    // スケール演出開始
+    void StartScaleAnimation(float startScale, float endScale, float duration);
+    // スケール演出更新
+    void UpdateScaleAnimation(float deltaTime);
 private:
     // シールドデータ
     ShieldData data_{};
@@ -34,7 +39,6 @@ private:
     bool isrecharging_;        // リチャージ中かどうか
     // ImGuiで設定編集中かどうかの変数
     bool isediting_;
-
 public:
 	// シールドデータ取得
     ShieldData GetShieldData() const { return data_; }

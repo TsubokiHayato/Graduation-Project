@@ -1,22 +1,20 @@
 {
   "current": {
     "shield": {
-      "fadetime": 1.0,
-      "isvisible": true,
-      "maxshield": 500.0,
+      "isvisible": false,
+      "maxshield": 1000.0,
       "offset": [
+        0.0,
         3.0,
-        3.0,
-        3.0
+        0.0
       ],
       "rechargerate": 100.0,
       "rechargetime": 1.0,
-      "shield": 500.0
+      "shield": 1000.0
     }
   },
   "default": {
     "shield": {
-      "fadetime": 1.0,
       "isvisible": true,
       "maxshield": 1000.0,
       "offset": [

@@ -18,14 +18,12 @@ void Shield::Initialize(const ShieldData& data, TuboEngine::Camera* camera) {
     isediting_ = false;
     // 現在値を最大値以内に収める
     data_.shield = std::clamp(data_.shield, 0.0f, effectivemaxshield_);
-
-
     // シールドオブジェクトの生成、初期化
     object_ = std::make_unique<Object3d>();
     object_->Initialize("block/block.obj");
-    object_->SetCamera(camera);       
-    // 初期位置をオフセットに設定
-    object_->SetPosition(data_.offset);
+    object_->SetCamera(camera);
+    // シールドオブジェクトの表示状態   
+    data_.isvisible = false;
 }
 
 // =========================================
@@ -41,6 +39,7 @@ void Shield::Update(const TuboEngine::Math::Vector3& playerPosition) {
 
     // =========================================
     // プレイヤーに追従
+	// プレイヤ―の位置 + オフセット
     // =========================================
     TuboEngine::Math::Vector3 position{
         playerPosition.x + data_.offset.x,
@@ -55,10 +54,10 @@ void Shield::Update(const TuboEngine::Math::Vector3& playerPosition) {
 // Draw
 // =========================================
 void Shield::Draw() {
-	// シールドオブジェクトが表示中であれば描画
-    if (data_.isvisible) {
+	// シールドが表示される条件は、シールドオブジェクトが表示可能で、実際に表示中であり、シールド耐久値が0より大きいこと
+    if (data_.isvisible && data_.shield > 0.0f) {
         object_->Draw();
-    }
+    }  
 }
 
 // =========================================
@@ -80,6 +79,8 @@ float Shield::TakeDamage(float damage) {
     // シールドで吸収できるダメージ
     float absorbedDamage = std::min(data_.shield, damage);
     data_.shield -= absorbedDamage;
+    // 耐久値が残っていれば表示
+    data_.isvisible = data_.shield > 0.0f;
     // 吸収しきれなかったダメージを返す
     return damage - absorbedDamage;
 }
@@ -94,6 +95,7 @@ void Shield::UpdateRecharge(float deltaTime) {
         // リチャージ完了
         rechargetimer_ = 0.0f;
         isrecharging_ = false;
+        data_.isvisible = false;
         return;
     }
 
@@ -103,8 +105,10 @@ void Shield::UpdateRecharge(float deltaTime) {
     if (rechargetimer_ < data_.rechargetime) {
         return;
     }
-
+    // リチャージ開始
     isrecharging_ = true;
+    // リチャージ中は非表示
+    data_.isvisible = false;
     // シールドを回復
     data_.shield += data_.rechargerate * deltaTime;
     // 最大値を超えないようにする
@@ -133,7 +137,6 @@ void Shield::ApplySettings(const ShieldData& data) {
     data_.rechargerate = data.rechargerate;
 
     data_.isvisible = data.isvisible;
-    data_.fadetime = data.fadetime;
     data_.offset = data.offset;
 
     // 現在のシールド値は最大値を超えないようにする
@@ -165,7 +168,6 @@ void Shield::DrawImGui() {
     float oldMaxShield = data_.maxshield;
     float oldRechargeTime = data_.rechargetime;
     float oldRechargeRate = data_.rechargerate;
-    float oldFadeTime = data_.fadetime;
     auto oldOffset = data_.offset;
     bool oldIsVisible = data_.isvisible;
     bool editing = false;
@@ -184,14 +186,6 @@ void Shield::DrawImGui() {
     editing |= ImGui::IsItemActive();
     ImGui::DragFloat3("Offset", &data_.offset.x, 0.01f);
     editing |= ImGui::IsItemActive();
-    ImGui::DragFloat("Fade Time", &data_.fadetime, 0.01f, 0.0f, 10.0f);
-    editing |= ImGui::IsItemActive();
-    ImGui::Text(
-        "Offset: X=%.2f Y=%.2f Z=%.2f",
-        data_.offset.x,
-        data_.offset.y,
-        data_.offset.z
-    );
     // =========================================
     // 設定値が変更されたか判定
     // =========================================
@@ -201,7 +195,6 @@ void Shield::DrawImGui() {
         oldRechargeTime != data_.rechargetime ||
         oldRechargeRate != data_.rechargerate ||
         oldIsVisible != data_.isvisible ||
-        oldFadeTime != data_.fadetime ||
         oldOffset.x != data_.offset.x ||
         oldOffset.y != data_.offset.y ||
         oldOffset.z != data_.offset.z;

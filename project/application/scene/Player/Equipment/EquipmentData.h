@@ -11,7 +11,6 @@ struct ShieldData {
     float rechargerate;          // 1秒あたりの回復量
     // オブジェクト設定
     bool isvisible;                   // シールドオブジェクトを表示するか
-    float fadetime;                   // フェードアウトにかかる時間
     TuboEngine::Math::Vector3 offset; // プレイヤー座標からの表示位置
 };
 

@@ -94,7 +94,6 @@ JsonManager::Json EquipmentDataJson::ToRoundedJson(const EquipmentData& data) {
     // シールドオブジェクト設定
     // =========================================
     json["shield"]["isvisible"] = data.shield.isvisible;
-    json["shield"]["fadetime"] = Round3(data.shield.fadetime);
 
     // Offset    
     json["shield"]["offset"] = TuboEngine::Math::Vector3{

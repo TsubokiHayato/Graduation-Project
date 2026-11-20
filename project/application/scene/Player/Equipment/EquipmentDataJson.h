@@ -54,7 +54,6 @@ private:
     X("rechargetime", rechargetime) \
     X("rechargerate", rechargerate) \
     X("isvisible", isvisible)       \
-    X("fadetime", fadetime)         \
     X("offset", offset)
 
 TUBO_JSON_DEFINE(ShieldData, SHIELD_FIELDS)
