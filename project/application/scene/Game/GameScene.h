@@ -9,6 +9,7 @@
 #include "BossWarning.h"
 #include "BossWarningRenderer.h"
 #include "ui/Reticle.h"
+#include "Player/Equipment/EquipmentDataJson.h"
 #include <memory>
 
 // =============================================================================
@@ -70,6 +71,9 @@ private:
 	// ---- ステージ・調整値 ----
 	float stageRadius_ = 20.0f;   // ボスの攻撃範囲 / プレイヤーの移動範囲（半径）
 	float playerRadius_ = 1.0f;   // プレイヤーの当たり判定の半径（block は 2x2x2）
-	float maxReduction_ = 0.8f;   // シールド 100% 時の軽減率（Nagai シーンと同じ）
-	float lastDamage_ = 0.0f;     // 直近に受けたダメージ（軽減後）
+	float lastDamage_ = 0.0f;     // 直近に減った HP（シールドで吸収した分を除く）
+
+	// ---- 装備（Onodera のシールド）。EquipmentManager はシングルトンなので Finalize で片付ける ----
+	EquipmentData equipmentData_{};
+	std::unique_ptr<EquipmentDataJson> equipmentDataJson_;
 };

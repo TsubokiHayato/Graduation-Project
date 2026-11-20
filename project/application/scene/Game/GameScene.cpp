@@ -5,6 +5,7 @@
 #include "TextManager.h"
 #include "EditorObjects.h"
 #include "WinApp.h"
+#include "Player/Equipment/EquipmentManager.h"
 #include <algorithm>
 #include <cmath>
 #ifdef USE_IMGUI
@@ -66,6 +67,11 @@ void GameScene::Initialize() {
 		pos.y = kGroundHeight + kPlayerHalfHeight;
 		playerObject->SetPosition(pos);
 	}
+
+	// ---- 装備（Onodera のシールド） ----
+	equipmentDataJson_ = std::make_unique<EquipmentDataJson>();
+	equipmentDataJson_->Load(equipmentData_);
+	EquipmentManager::GetInstance()->Initialize(equipmentData_, equipmentDataJson_.get(), camera_->GetCamera());
 
 	// ---- ブースター（Tsuboki） ----
 	booster_ = std::make_unique<PlayerBooster>();
@@ -138,6 +144,9 @@ void GameScene::Update() {
 	playerObject->SetRotation(playerRotate);
 	playerObject->Update();
 
+	// シールドはプレイヤーの位置が決まった後に追従させる。耐久値はシールド配分で決まる
+	EquipmentManager::GetInstance()->Update(player_->GetEnergyOutput()->GetShieldOutputRate(), playerObject->GetPosition());
+
 	// ---- ボス ----
 	Math::Vector3 playerFoot = playerObject->GetPosition();
 	playerFoot.y = kGroundHeight;
@@ -188,15 +197,13 @@ void GameScene::ClampPlayerToStage() {
 }
 
 void GameScene::OnBossHit(float damage) {
-	// シールド配分（0〜1）で軽減する。式は Nagai シーンと同じ
-	const PlayerEnergyData& energy = player_->GetEnergyOutput()->GetEnergyData();
-	const float shieldRatio = energy.maxenergy > 0.0f ? std::clamp(energy.shield / energy.maxenergy, 0.0f, 1.0f) : 0.0f;
-	const float reduced = damage * (1.0f - maxReduction_ * shieldRatio);
 	if (player_->GetHP()->IsInvincible() || player_->GetState() == PlayerState::Dead) {
 		return;
 	}
-	lastDamage_ = reduced;
-	player_->TakeDamage(reduced);
+	// シールド（Onodera の装備）が先に受け止め、吸収しきれなかった分だけ HP が減る
+	const float hpBefore = player_->GetHP()->GetCurrentHP();
+	EquipmentManager::GetInstance()->TakeDamage(damage, *player_->GetHP(), player_->GetState());
+	lastDamage_ = hpBefore - player_->GetHP()->GetCurrentHP();
 }
 
 void GameScene::UpdateWarning(float dt) {
@@ -221,6 +228,7 @@ void GameScene::Object3DDraw() {
 	boss_->Draw();
 	player_->Draw();
 	booster_->Draw();
+	EquipmentManager::GetInstance()->Draw(); // シールド（プレイヤーを包むので後に描く）
 }
 
 void GameScene::SpriteDraw() {
@@ -247,6 +255,11 @@ void GameScene::ImGuiDraw() {
 	booster_->DrawImGui();
 	ImGui::End();
 
+	if (ImGui::Begin("Equipment")) {
+		EquipmentManager::GetInstance()->DrawImGui();
+	}
+	ImGui::End();
+
 	reticle_.DrawImGui();
 	ImGui::Begin("Reticle");
 	ImGui::DragFloat("Lock On Aim Height", &lockOnAimHeight_, 0.05f, -5.0f, 10.0f);
@@ -261,7 +274,8 @@ void GameScene::ImGuiDraw() {
 			terrain_->SetScale({stageRadius_, 1.0f, stageRadius_});
 		}
 		ImGui::DragFloat("Player hit radius", &playerRadius_, 0.01f, 0.1f, 3.0f);
-		ImGui::SliderFloat("Max shield reduction", &maxReduction_, 0.0f, 0.99f);
+		const Shield* shield = EquipmentManager::GetInstance()->GetShield();
+		ImGui::Text("Shield : %.1f / %.1f%s", shield->GetCurrentShield(), shield->GetMaxShield(), shield->IsBroken() ? "  (BROKEN)" : "");
 		ImGui::Text("HP : %.1f / %.1f", player_->GetHP()->GetCurrentHP(), player_->GetHP()->GetMaxHP());
 		ImGui::Text("Last damage : %.1f", lastDamage_);
 		if (player_->GetState() == PlayerState::Dead) {
@@ -307,4 +321,6 @@ void GameScene::ImGuiDraw() {
 void GameScene::Finalize() {
 	TextManager::GetInstance()->ClearAllTexts();
 	TextManager::GetInstance()->ClearAllSprites();
+	// EquipmentManager はシングルトンでシーンを越えて生存するため、退場時に片付ける
+	EquipmentManager::GetInstance()->Finalize();
 }
