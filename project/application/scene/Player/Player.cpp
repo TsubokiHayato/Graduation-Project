@@ -43,6 +43,9 @@ void Player::Update() {
     // HPの更新処理
     hp_->Update();
 
+    // エネルギー配分の更新（スライダー接続中はスライダーの値を反映）
+    energyoutput_->Update();
+
     // 移動処理関連の更新処理
     movement_->Update(energyoutput_->GetBoosterOutputRate());
 

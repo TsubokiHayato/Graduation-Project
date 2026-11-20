@@ -1,4 +1,5 @@
 #include "PlayerEnergyOutput.h"
+#include "SliderInput.h"
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
 #endif
@@ -14,7 +15,38 @@ void PlayerEnergyOutput::Initialize(const PlayerEnergyData& energyData) {
 //  Update
 // =============================================================================
 void PlayerEnergyOutput::Update() {
+    if (IsSliderControlled()) {
+        ApplySliderInput();
+    }
+}
 
+bool PlayerEnergyOutput::IsSliderControlled() const {
+    return useSlider_ && TuboEngine::SliderInput::GetInstance()->IsConnected();
+}
+
+// =============================================================================
+//  スライダー → エネルギー配分
+//  スライダー 0:Shield / 1:Fight / 2:Beam / 3:Booster
+//  1本だけ最大 → その項目に全エネルギー。全部最大 → 4等分。
+//  合計が上限に届かない分は「未使用エネルギー」として残る。
+// =============================================================================
+void PlayerEnergyOutput::ApplySliderInput() {
+    TuboEngine::SliderInput* slider = TuboEngine::SliderInput::GetInstance();
+
+    float rate[4] = {};
+    float sum = 0.0f;
+    for (int i = 0; i < 4; ++i) {
+        rate[i] = slider->Get(i); // 0.0〜1.0
+        sum += rate[i];
+    }
+    // 合計が 1 を超えたら比率を保ったまま 1 に収める
+    const float scale = (sum > 1.0f) ? 1.0f / sum : 1.0f;
+
+    const float maxEnergy = energyData_.maxenergy;
+    energyData_.shield = maxEnergy * rate[0] * scale;
+    energyData_.fight = maxEnergy * rate[1] * scale;
+    energyData_.beam = maxEnergy * rate[2] * scale;
+    energyData_.booster = maxEnergy * rate[3] * scale;
 }
 
 // =============================================================================
@@ -84,8 +116,23 @@ void PlayerEnergyOutput::DrawImGui() {
         // =========================================
         // エネルギー入力
         // =========================================
+        // =========================================
+        // スライダー（マイコン）操作
+        // =========================================
+        ImGui::Separator();
+        ImGui::Checkbox("Use Slider (0:Shield 1:Fight 2:Beam 3:Booster)", &useSlider_);
+        if (useSlider_) {
+            if (TuboEngine::SliderInput::GetInstance()->IsConnected()) {
+                ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "Slider: connected (manual input disabled)");
+            } else {
+                ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.3f, 1.0f), "Slider: not connected (using manual values)");
+            }
+        }
+
         ImGui::Separator();
         ImGui::Text("Adjust Energy");
+        // スライダー操作中は手入力しても毎フレーム上書きされるので触れないようにする
+        ImGui::BeginDisabled(IsSliderControlled());
 
         // 入力前の値を保存
         float oldShield = energyData_.shield;
@@ -113,6 +160,7 @@ void PlayerEnergyOutput::DrawImGui() {
                 ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "Energy limit exceeded!");
             }
         }
+        ImGui::EndDisabled();
     }
 
 #endif
