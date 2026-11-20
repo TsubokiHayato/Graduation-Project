@@ -28,6 +28,9 @@
     <Filter Include="application\scene\Player">
       <UniqueIdentifier>{e29ee866-2a22-4ddd-a4f4-dbb29b22a8ef}</UniqueIdentifier>
     </Filter>
+    <Filter Include="application\scene\Player\Equipment">
+      <UniqueIdentifier>{dcc5662c-26e6-469c-a161-81ac26604707}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -102,6 +105,15 @@
     <ClCompile Include="BossHitShapes.cpp" />
     <ClCompile Include="BossWarning.cpp" />
     <ClCompile Include="BossWarningRenderer.cpp" />
+    <ClCompile Include="application\scene\Player\Equipment\EquipmentDataJson.cpp">
+      <Filter>application\scene\Player\Equipment</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Player\Equipment\EquipmentManager.cpp">
+      <Filter>application\scene\Player\Equipment</Filter>
+    </ClCompile>
+    <ClCompile Include="application\scene\Player\Equipment\Shield.cpp">
+      <Filter>application\scene\Player\Equipment</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FadeScreen.h" />
@@ -181,5 +193,17 @@
     <ClInclude Include="application\Boss\BossAttackSweep.h" />
     <ClInclude Include="BossWarning.h" />
     <ClInclude Include="BossWarningRenderer.h" />
+    <ClInclude Include="application\scene\Player\Equipment\EquipmentData.h">
+      <Filter>application\scene\Player\Equipment</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Player\Equipment\EquipmentDataJson.h">
+      <Filter>application\scene\Player\Equipment</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Player\Equipment\EquipmentManager.h">
+      <Filter>application\scene\Player\Equipment</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Player\Equipment\Shield.h">
+      <Filter>application\scene\Player\Equipment</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
