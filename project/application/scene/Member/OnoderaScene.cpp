@@ -36,11 +36,11 @@ void OnoderaScene::Initialize() {
 void OnoderaScene::Update() {
 	camera_->Update();
 
-	// 装備管理更新処理
-	EquipmentManager::GetInstance()->Update(player_->GetEnergyOutput()->GetShieldOutputRate());
-
 	// プレイヤ―更新処理
 	player_->Update();
+
+	// 装備管理更新処理
+	EquipmentManager::GetInstance()->Update(player_->GetEnergyOutput()->GetShieldOutputRate(), player_->GetPlayerObject()->GetPosition());
 
 	TextManager::GetInstance()->UpdateAll();
 }
