@@ -5,7 +5,7 @@
       "booster": 50.0,
       "fight": 0.0,
       "maxenergy": 100.0,
-      "shield": 50.0
+      "shield": 25.0
     },
     "hp": {
       "currenthp": 100.0,
