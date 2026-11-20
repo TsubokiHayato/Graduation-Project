@@ -48,11 +48,14 @@ private:
 // =========================================
 // シールドデータのJSON変換
 // =========================================
-#define SHIELD_FIELDS(X) \
-    X("shield", shield) \
-    X("maxshield", maxshield) \
+#define SHIELD_FIELDS(X)            \
+    X("shield", shield)             \
+    X("maxshield", maxshield)       \
     X("rechargetime", rechargetime) \
-    X("rechargerate", rechargerate)
+    X("rechargerate", rechargerate) \
+    X("isvisible", isvisible)       \
+    X("fadetime", fadetime)         \
+    X("offset", offset)
 
 TUBO_JSON_DEFINE(ShieldData, SHIELD_FIELDS)
 

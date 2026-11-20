@@ -29,7 +29,7 @@ public:
     // 初期化処理
     void Initialize(EquipmentData& data, EquipmentDataJson* dataJson, TuboEngine::Camera* camera);
     // 更新処理
-    void Update(float shieldOutputRate);
+    void Update(float shieldOutputRate, const TuboEngine::Math::Vector3& playerPosition);
     // 描画処理
     void Draw();
     // ImGui

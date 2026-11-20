@@ -19,24 +19,35 @@ void Shield::Initialize(const ShieldData& data, TuboEngine::Camera* camera) {
     // 現在値を最大値以内に収める
     data_.shield = std::clamp(data_.shield, 0.0f, effectivemaxshield_);
 
+
     // シールドオブジェクトの生成、初期化
     object_ = std::make_unique<Object3d>();
     object_->Initialize("block/block.obj");
-    object_->SetCamera(camera);
+    object_->SetCamera(camera);       
+    // 初期位置をオフセットに設定
+    object_->SetPosition(data_.offset);
 }
 
 // =========================================
 // Update
 // =========================================
-void Shield::Update() {
-    // ImGuiで設定編集中なら処理を停止
-    if (isediting_) {
-        return;
-    }
+void Shield::Update(const TuboEngine::Math::Vector3& playerPosition) {
     constexpr float kDeltaTime = 1.0f / 60.0f;
-    UpdateRecharge(kDeltaTime);
 
+    // ImGuiで設定編集中でなければリチャージ処理
+    if (!isediting_) {
+        UpdateRecharge(kDeltaTime);
+    }
 
+    // =========================================
+    // プレイヤーに追従
+    // =========================================
+    TuboEngine::Math::Vector3 position{
+        playerPosition.x + data_.offset.x,
+        playerPosition.y + data_.offset.y,
+        playerPosition.z + data_.offset.z
+    };
+    object_->SetPosition(position);
     object_->Update();
 }
 
@@ -44,7 +55,10 @@ void Shield::Update() {
 // Draw
 // =========================================
 void Shield::Draw() {
-    object_->Draw();
+	// シールドオブジェクトが表示中であれば描画
+    if (data_.isvisible) {
+        object_->Draw();
+    }
 }
 
 // =========================================
@@ -110,6 +124,23 @@ void Shield::SetOutputRate(float outputRate) {
 }
 
 // =========================================
+// 設定データを反映
+// =========================================
+void Shield::ApplySettings(const ShieldData& data) {
+    // 設定値のみ反映
+    data_.maxshield = data.maxshield;
+    data_.rechargetime = data.rechargetime;
+    data_.rechargerate = data.rechargerate;
+
+    data_.isvisible = data.isvisible;
+    data_.fadetime = data.fadetime;
+    data_.offset = data.offset;
+
+    // 現在のシールド値は最大値を超えないようにする
+    data_.shield = std::clamp(data_.shield, 0.0f, effectivemaxshield_);
+}
+
+// =========================================
 // ImGui
 // =========================================
 void Shield::DrawImGui() {
@@ -134,15 +165,46 @@ void Shield::DrawImGui() {
     float oldMaxShield = data_.maxshield;
     float oldRechargeTime = data_.rechargetime;
     float oldRechargeRate = data_.rechargerate;
+    float oldFadeTime = data_.fadetime;
+    auto oldOffset = data_.offset;
+    bool oldIsVisible = data_.isvisible;
+    bool editing = false;
 
-    // 設定項目
+    // シールド耐久値設定    
     ImGui::DragFloat("Max Shield", &data_.maxshield, 1.0f);
-    bool editing = ImGui::IsItemActive();
+    editing = ImGui::IsItemActive();
     ImGui::DragFloat("Recharge Delay", &data_.rechargetime, 0.1f);
     editing |= ImGui::IsItemActive();
     ImGui::DragFloat("Recharge Rate", &data_.rechargerate, 1.0f);
     editing |= ImGui::IsItemActive();
+
+    ImGui::SeparatorText("Shield Object");
+    // オブジェクト設定
+    ImGui::Checkbox("Display", &data_.isvisible);
+    editing |= ImGui::IsItemActive();
+    ImGui::DragFloat3("Offset", &data_.offset.x, 0.01f);
+    editing |= ImGui::IsItemActive();
+    ImGui::DragFloat("Fade Time", &data_.fadetime, 0.01f, 0.0f, 10.0f);
+    editing |= ImGui::IsItemActive();
+    ImGui::Text(
+        "Offset: X=%.2f Y=%.2f Z=%.2f",
+        data_.offset.x,
+        data_.offset.y,
+        data_.offset.z
+    );
+    // =========================================
     // 設定値が変更されたか判定
-    isediting_ = editing || oldMaxShield != data_.maxshield || oldRechargeTime != data_.rechargetime || oldRechargeRate != data_.rechargerate;
+    // =========================================
+    isediting_ =
+        editing ||
+        oldMaxShield != data_.maxshield ||
+        oldRechargeTime != data_.rechargetime ||
+        oldRechargeRate != data_.rechargerate ||
+        oldIsVisible != data_.isvisible ||
+        oldFadeTime != data_.fadetime ||
+        oldOffset.x != data_.offset.x ||
+        oldOffset.y != data_.offset.y ||
+        oldOffset.z != data_.offset.z;
+
 #endif
 }

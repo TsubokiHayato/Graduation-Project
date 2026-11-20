@@ -90,5 +90,18 @@ JsonManager::Json EquipmentDataJson::ToRoundedJson(const EquipmentData& data) {
     json["shield"]["rechargetime"] = Round3(data.shield.rechargetime);
     json["shield"]["rechargerate"] = Round3(data.shield.rechargerate);
 
+    // =========================================
+    // シールドオブジェクト設定
+    // =========================================
+    json["shield"]["isvisible"] = data.shield.isvisible;
+    json["shield"]["fadetime"] = Round3(data.shield.fadetime);
+
+    // Offset    
+    json["shield"]["offset"] = TuboEngine::Math::Vector3{
+        static_cast<float>(Round3(data.shield.offset.x)),
+        static_cast<float>(Round3(data.shield.offset.y)),
+        static_cast<float>(Round3(data.shield.offset.z))
+    };
+
     return json;
 }

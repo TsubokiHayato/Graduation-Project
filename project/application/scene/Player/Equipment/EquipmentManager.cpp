@@ -42,12 +42,12 @@ void EquipmentManager::Initialize(EquipmentData& data, EquipmentDataJson* dataJs
 // =========================================
 // Update
 // =========================================
-void EquipmentManager::Update(float shieldOutputRate) {
+void EquipmentManager::Update(float shieldOutputRate, const TuboEngine::Math::Vector3& playerPosition) {
     // シールド出力率を反映
     shield_.SetOutputRate(shieldOutputRate);
 
     // シールド更新
-    shield_.Update();
+    shield_.Update(playerPosition);
 }
 
 // =========================================
@@ -90,8 +90,7 @@ void EquipmentManager::DrawImGui() {
         // 現在のシールドデータを取得
         data_->shield = shield_.GetShieldData();
         // 保存時は現在のシールドを満タン状態にする
-        // maxshieldは基準最大値なので変更しない
-        data_->shield.shield = data_->shield.maxshield;
+        data_->shield.shield = data_->shield.maxshield;      
         // JSON保存
         dataJson_->Save(*data_);
     }
@@ -100,8 +99,8 @@ void EquipmentManager::DrawImGui() {
     // Reset
     if (ImGui::Button("Reset")) {
         if (dataJson_->Reset(*data_)) {
-            // defaultの設定でシールドを再初期化
-            shield_.Initialize(data_->shield, camera_);
+            // 読み込んだ設定値をシールドに反映し、再初期化
+            shield_.ApplySettings(data_->shield);
         }
     }
     ImGui::EndDisabled();

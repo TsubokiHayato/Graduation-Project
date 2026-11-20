@@ -10,7 +10,7 @@ public:
     // 初期化処理
     void Initialize(const ShieldData& data, TuboEngine::Camera* camera);
     // 更新処理
-    void Update();
+    void Update(const TuboEngine::Math::Vector3& playerPosition);
     // 描画処理
     void Draw();
     // ImGui
@@ -21,6 +21,8 @@ public:
     void UpdateRecharge(float deltaTime);
     // シールド出力率設定
     void SetOutputRate(float outputRate);
+    // 設定データを反映（オブジェクトは再生成しない）
+    void ApplySettings(const ShieldData& data);
 private:
     // シールドデータ
     ShieldData data_{};
@@ -32,7 +34,10 @@ private:
     bool isrecharging_;        // リチャージ中かどうか
     // ImGuiで設定編集中かどうかの変数
     bool isediting_;
+
 public:
+	// シールドデータ取得
+    ShieldData GetShieldData() const { return data_; }
     // シールドオブジェクト取得
     TuboEngine::Object3d* GetShieldObject() const { return object_.get(); }
     // シールドが動作中かどうか
@@ -47,6 +52,4 @@ public:
     float GetMaxShield() const { return effectivemaxshield_; }
     // シールドが破壊されているかどうか
     bool IsBroken() const { return data_.shield <= 0.0f; }
-    // 現在のシールド設定データを取得
-    const ShieldData& GetShieldData() const { return data_; }
 };
