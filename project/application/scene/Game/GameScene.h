@@ -8,6 +8,7 @@
 #include "../../Boss/Boss.h"
 #include "BossWarning.h"
 #include "BossWarningRenderer.h"
+#include "ui/Reticle.h"
 #include <memory>
 
 // =============================================================================
@@ -61,6 +62,10 @@ private:
 	float warnHitSec_ = 0.15f;      // 判定が出ている秒数
 	float warnDamage_ = 20.0f;      // 当たったときのダメージ
 	bool  warnLastHit_ = false;
+
+	// ---- レティクル（Tsuboki）。出力配分ゲージ付き、ロックオン中はボスへ寄る ----
+	Reticle reticle_;
+	float lockOnAimHeight_ = 0.0f; // ロックオン時に狙う高さ（ボスの中心からの距離）
 
 	// ---- ステージ・調整値 ----
 	float stageRadius_ = 20.0f;   // ボスの攻撃範囲 / プレイヤーの移動範囲（半径）

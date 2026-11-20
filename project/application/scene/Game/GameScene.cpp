@@ -4,6 +4,7 @@
 #include "LineManager.h"
 #include "TextManager.h"
 #include "EditorObjects.h"
+#include "WinApp.h"
 #include <algorithm>
 #include <cmath>
 #ifdef USE_IMGUI
@@ -82,6 +83,11 @@ void GameScene::Initialize() {
 	// ---- 攻撃予兆（Satou） ----
 	warningRenderer_.Initialize(camera_->GetCamera());
 
+	// ---- レティクル（画面中央） ----
+	reticle_.Initialize();
+	TuboEngine::WinApp* winApp = TuboEngine::WinApp::GetInstance();
+	reticle_.SetCenter({winApp->GetClientWidth() * 0.5f, winApp->GetClientHeight() * 0.5f});
+
 	// ---- カメラの追従対象 ----
 	// player は足元の位置を渡す（プリセットが足元基準のため）
 	camera_->AddTarget("player", [this] {
@@ -147,6 +153,19 @@ void GameScene::Update() {
 	// ---- 予兆（カメラ更新後） ----
 	UpdateWarning(dt);
 
+	// ---- レティクル（カメラ更新後の行列で画面座標に直す） ----
+	// ゲージはプレイヤーのエネルギー配分（スライダー / ImGui）をそのまま表示する
+	const PlayerEnergyData& energy = player_->GetEnergyOutput()->GetEnergyData();
+	reticle_.SetOutputs({energy.fight, energy.beam, energy.shield, energy.booster});
+	if (camera_->IsLockedOn()) {
+		Math::Vector3 aim = boss_->GetObject3d()->GetPosition();
+		aim.y += lockOnAimHeight_;
+		reticle_.SetLockOn(aim, *camera_->GetCamera());
+	} else {
+		reticle_.ClearLockOn();
+	}
+	reticle_.Update(dt);
+
 	terrain_->Update();
 	DrawStageCircle(stageRadius_, {0.6f, 0.6f, 0.6f, 1.0f});
 
@@ -205,6 +224,7 @@ void GameScene::Object3DDraw() {
 }
 
 void GameScene::SpriteDraw() {
+	reticle_.Draw();
 	TextManager::GetInstance()->DrawAll();
 }
 
@@ -225,6 +245,11 @@ void GameScene::ImGuiDraw() {
 
 	ImGui::Begin("Booster");
 	booster_->DrawImGui();
+	ImGui::End();
+
+	reticle_.DrawImGui();
+	ImGui::Begin("Reticle");
+	ImGui::DragFloat("Lock On Aim Height", &lockOnAimHeight_, 0.05f, -5.0f, 10.0f);
 	ImGui::End();
 
 	if (ImGui::Begin("Game")) {
