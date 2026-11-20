@@ -58,7 +58,6 @@ void PlayerEnergyOutput::DrawImGui() {
     // エネルギー配分
     // =========================================
     if (ImGui::CollapsingHeader("Energy Output", ImGuiTreeNodeFlags_DefaultOpen)) {
-
         // =========================================
         // エネルギー合計
         // =========================================

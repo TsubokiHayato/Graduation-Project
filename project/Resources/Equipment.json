@@ -1,0 +1,30 @@
+{
+  "current": {
+    "shield": {
+      "isvisible": false,
+      "maxshield": 1000.0,
+      "offset": [
+        0.0,
+        3.0,
+        0.0
+      ],
+      "rechargerate": 100.0,
+      "rechargetime": 1.0,
+      "shield": 1000.0
+    }
+  },
+  "default": {
+    "shield": {
+      "isvisible": true,
+      "maxshield": 1000.0,
+      "offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rechargerate": 100.0,
+      "rechargetime": 1.0,
+      "shield": 1000.0
+    }
+  }
+}

@@ -8,7 +8,9 @@
 #include "PlayerMovement.h"
 #include "PlayerHP.h"
 
+// =========================================
 // プレイヤ―要素をまとめたクラス
+// =========================================
 class Player {
 public:
     // 初期化処理
@@ -41,7 +43,7 @@ public:
     // プレイヤーデータ取得
     const PlayerData& GetPlayerData() const { return data_; }
     // ステート取得
-    PlayerState GetState() const { return data_.state; }
+    PlayerState& GetState() { return data_.state; }
     // エネルギー管理クラス取得
     PlayerEnergyOutput* GetEnergyOutput() const { return energyoutput_.get(); }
     // 移動処理クラス取得
