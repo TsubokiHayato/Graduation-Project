@@ -27,8 +27,11 @@ public:
 public:
 	BossAttackLockOnBeam();
 
+	const char* GetId() const override { return "LockOnBeam"; }
 	const char* GetName() const override { return "ロックオンビーム (LockOnBeam)"; }
 	void DrawLines(const Boss& boss) const override;
+	void SaveParams(TuboEngine::JsonManager::Json& json) const override;
+	void LoadParams(const TuboEngine::JsonManager::Json& json) override;
 
 	Params& GetParams() { return params_; }
 	bool GetLastHitResult() const { return lastHitResult_; }

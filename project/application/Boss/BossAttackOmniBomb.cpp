@@ -26,6 +26,24 @@ const Math::Vector4 kColorWarning = {1.0f, 0.1f, 0.1f, 1.0f}; // 赤い警告表
 
 } // namespace
 
+// 固有パラメータの JSON 変換（Resources/Boss.json の "attacks" → "OmniBomb" → "params"）
+#define OMNIBOMB_PARAM_FIELDS(X)	\
+	X("radius", radius)	\
+	X("riseHeight", riseHeight)	\
+	X("blastTime", blastTime)	\
+	X("landTime", landTime)
+TUBO_JSON_DEFINE(BossAttackOmniBomb::Params, OMNIBOMB_PARAM_FIELDS)
+
+void BossAttackOmniBomb::SaveParams(JsonManager::Json& json) const {
+	BossAttackState::SaveParams(json);
+	json["params"] = params_;
+}
+
+void BossAttackOmniBomb::LoadParams(const JsonManager::Json& json) {
+	BossAttackState::LoadParams(json);
+	JsonManager::Read(json, "params", params_);
+}
+
 //パラメータの初期化
 BossAttackOmniBomb::BossAttackOmniBomb() {
 

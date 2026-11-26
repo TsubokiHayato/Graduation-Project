@@ -10,10 +10,35 @@
 
 using namespace TuboEngine;
 
+// 共通パラメータの JSON 変換
+#define BOSS_ATTACK_COMMON_FIELDS(X)       \
+	X("telegraphTime", telegraphTime)      \
+	X("damage", damage)                    \
+	X("recoveryTime", recoveryTime)
+TUBO_JSON_DEFINE(BossAttackState::CommonParams, BOSS_ATTACK_COMMON_FIELDS)
+
+namespace {
+// この攻撃がボスの向き・高さ・色を動かしてよいかを、処理の間だけボスに設定する
+// （同時攻撃の従が、主の動きを上書きしないようにする）
+class BodyControlScope {
+public:
+	BodyControlScope(Boss& boss, bool enabled) : boss_(boss), prev_(boss.IsBodyControlEnabled()) { boss_.SetBodyControlEnabled(enabled); }
+	~BodyControlScope() { boss_.SetBodyControlEnabled(prev_); }
+	BodyControlScope(const BodyControlScope&) = delete;
+	BodyControlScope& operator=(const BodyControlScope&) = delete;
+
+private:
+	Boss& boss_;
+	bool prev_;
+};
+} // namespace
+
 // =============================================================================
 //  進行
 // =============================================================================
 void BossAttackState::Enter(Boss& boss) {
+	BodyControlScope scope(boss, controlsBody_);
+	holdReleased_ = false;
 	OnEnter(boss);
 	ChangeStep(boss, Step::Telegraph);
 }
@@ -22,8 +47,18 @@ void BossAttackState::Update(Boss& boss, float deltaTime) {
 	if (step_ == Step::Finished) {
 		return;
 	}
+	BodyControlScope scope(boss, controlsBody_);
 	deltaTime_ = deltaTime;
 	stepTimer_ += deltaTime;
+
+	// 同時攻撃の主：ほかの攻撃が終わるまで姿勢を保って待つ
+	if (step_ == Step::Hold) {
+		UpdateHold(boss);
+		if (holdReleased_) {
+			ChangeStep(boss, Step::Recovery);
+		}
+		return;
+	}
 
 	const float duration = GetStepDuration(step_);
 	const float t = StepProgress(duration);
@@ -37,16 +72,45 @@ void BossAttackState::Update(Boss& boss, float deltaTime) {
 
 	// 段階の時間が過ぎたら次へ
 	if (stepTimer_ >= duration) {
-		switch (step_) {
-		case Step::Telegraph: ChangeStep(boss, Step::Attack);   break;
-		case Step::Attack:    ChangeStep(boss, Step::Recovery); break;
-		case Step::Recovery:
-			ChangeStep(boss, Step::Finished);
-			OnExit(boss);
-			break;
-		default: break;
-		}
+		AdvanceStep(boss);
 	}
+}
+
+void BossAttackState::AdvanceStep(Boss& boss) {
+	switch (step_) {
+	case Step::Telegraph:
+		ChangeStep(boss, Step::Attack);
+		break;
+	case Step::Attack:
+		if (skipRecovery_) {
+			// 連続技の途中・同時攻撃の従：硬直せずに終わる
+			Finish(boss);
+		} else if (holdBeforeRecovery_ && !holdReleased_) {
+			// 同時攻撃の主：ほかの攻撃が終わるまで待ってから硬直する
+			ChangeStep(boss, Step::Hold);
+		} else {
+			ChangeStep(boss, Step::Recovery);
+		}
+		break;
+	case Step::Recovery:
+		Finish(boss);
+		break;
+	default:
+		break;
+	}
+}
+
+void BossAttackState::Cancel(Boss& boss) {
+	if (step_ == Step::Finished) {
+		return;
+	}
+	BodyControlScope scope(boss, controlsBody_);
+	Finish(boss);
+}
+
+void BossAttackState::Finish(Boss& boss) {
+	ChangeStep(boss, Step::Finished);
+	OnExit(boss);
 }
 
 void BossAttackState::ChangeStep(Boss& boss, Step next) {
@@ -64,6 +128,17 @@ float BossAttackState::GetStepDuration(Step step) const {
 	case Step::Recovery:  return common_.recoveryTime;
 	default:              return 0.0f;
 	}
+}
+
+// =============================================================================
+//  パラメータの保存・読み込み
+// =============================================================================
+void BossAttackState::SaveParams(JsonManager::Json& json) const {
+	json["common"] = common_;
+}
+
+void BossAttackState::LoadParams(const JsonManager::Json& json) {
+	JsonManager::Read(json, "common", common_);
 }
 
 float BossAttackState::StepProgress(float duration) const {

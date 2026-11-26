@@ -21,8 +21,11 @@ public:
 public:
 	BossAttackOmniBomb();
 
+	const char* GetId() const override { return "OmniBomb"; }
 	const char* GetName() const override { return "全方位爆撃 (OmniBomb)"; }
 	void DrawLines(const Boss& boss) const override;
+	void SaveParams(TuboEngine::JsonManager::Json& json) const override;
+	void LoadParams(const TuboEngine::JsonManager::Json& json) override;
 
 	Params& GetParams() { return params_; }
 	bool GetLastHitResult() const { return lastHitResult_; }

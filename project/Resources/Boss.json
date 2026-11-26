@@ -1,0 +1,380 @@
+{
+  "default": {
+    "common": {
+      "maxHp": 4000.0,
+      "coreArcDeg": 120.0,
+      "faceTolDeg": 10.0,
+      "faceMaxWait": 1.5,
+      "firstDelay": 1.5
+    },
+    "patterns": [
+      {
+        "name": "SweepToBeam",
+        "type": "Sequence",
+        "attacks": [
+          "Sweep",
+          "LockOnBeam"
+        ]
+      },
+      {
+        "name": "BeamWithBarrage",
+        "type": "Parallel",
+        "attacks": [
+          "LockOnBeam",
+          "Barrage"
+        ]
+      }
+    ],
+    "phases": [
+      {
+        "name": "第1形態",
+        "trigger": {
+          "type": "HpRatio",
+          "value": 1.0
+        },
+        "transitionTime": 0.0,
+        "turnSpeedDeg": 69.0,
+        "idleTime": 0.25,
+        "look": {
+          "model": "block/block.obj",
+          "color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "patterns": [
+          {
+            "pattern": "OmniBomb",
+            "weight": 1.0,
+            "cooldown": 2
+          },
+          {
+            "pattern": "LockOnBeam",
+            "weight": 1.0,
+            "cooldown": 1
+          },
+          {
+            "pattern": "Barrage",
+            "weight": 1.0,
+            "cooldown": 1
+          },
+          {
+            "pattern": "Sweep",
+            "weight": 1.0,
+            "cooldown": 1
+          }
+        ]
+      },
+      {
+        "name": "第2形態",
+        "trigger": {
+          "type": "HpRatio",
+          "value": 0.5
+        },
+        "transitionTime": 2.5,
+        "turnSpeedDeg": 100.0,
+        "idleTime": 0.15,
+        "look": {
+          "model": "block/block.obj",
+          "color": [
+            1.0,
+            0.55,
+            0.55,
+            1.0
+          ],
+          "scale": [
+            1.2,
+            1.2,
+            1.2
+          ]
+        },
+        "patterns": [
+          {
+            "pattern": "OmniBomb",
+            "weight": 0.7,
+            "cooldown": 3
+          },
+          {
+            "pattern": "LockOnBeam",
+            "weight": 1.0,
+            "cooldown": 1
+          },
+          {
+            "pattern": "Barrage",
+            "weight": 1.0,
+            "cooldown": 1
+          },
+          {
+            "pattern": "Sweep",
+            "weight": 1.0,
+            "cooldown": 1
+          },
+          {
+            "pattern": "SweepToBeam",
+            "weight": 1.0,
+            "cooldown": 2
+          },
+          {
+            "pattern": "BeamWithBarrage",
+            "weight": 1.0,
+            "cooldown": 2
+          }
+        ]
+      }
+    ],
+    "attacks": {
+      "OmniBomb": {
+        "common": {
+          "telegraphTime": 2.0,
+          "damage": 60.0,
+          "recoveryTime": 3.0
+        },
+        "params": {
+          "radius": 25.0,
+          "riseHeight": 4.0,
+          "blastTime": 0.5,
+          "landTime": 0.6
+        }
+      },
+      "LockOnBeam": {
+        "common": {
+          "telegraphTime": 1.0,
+          "damage": 40.0,
+          "recoveryTime": 1.5
+        },
+        "params": {
+          "trackingTime": 1.5,
+          "evadeTime": 0.8,
+          "beamWidth": 2.0,
+          "fireTime": 1.0,
+          "trackingSpeed": 3.0
+        }
+      },
+      "Barrage": {
+        "common": {
+          "telegraphTime": 1.2,
+          "damage": 10.0,
+          "recoveryTime": 0.8
+        },
+        "params": {
+          "bulletCount": 16,
+          "bulletSpeed": 8.0,
+          "bulletSize": 0.5,
+          "volleyCount": 3,
+          "volleyInterval": 0.6,
+          "volleyAngleShift": 0.5,
+          "portLength": 1.5
+        }
+      },
+      "Sweep": {
+        "common": {
+          "telegraphTime": 1.0,
+          "damage": 30.0,
+          "recoveryTime": 1.5
+        },
+        "params": {
+          "radius": 7.0,
+          "angleDeg": 120.0,
+          "swingTime": 0.3,
+          "windUpDeg": 40.0
+        }
+      }
+    }
+  },
+  "current": {
+    "common": {
+      "maxHp": 4000.0,
+      "coreArcDeg": 120.0,
+      "faceTolDeg": 10.0,
+      "faceMaxWait": 1.5,
+      "firstDelay": 1.5
+    },
+    "patterns": [
+      {
+        "name": "SweepToBeam",
+        "type": "Sequence",
+        "attacks": [
+          "Sweep",
+          "LockOnBeam"
+        ]
+      },
+      {
+        "name": "BeamWithBarrage",
+        "type": "Parallel",
+        "attacks": [
+          "LockOnBeam",
+          "Barrage"
+        ]
+      }
+    ],
+    "phases": [
+      {
+        "name": "第1形態",
+        "trigger": {
+          "type": "HpRatio",
+          "value": 1.0
+        },
+        "transitionTime": 0.0,
+        "turnSpeedDeg": 69.0,
+        "idleTime": 0.25,
+        "look": {
+          "model": "block/block.obj",
+          "color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "patterns": [
+          {
+            "pattern": "OmniBomb",
+            "weight": 1.0,
+            "cooldown": 2
+          },
+          {
+            "pattern": "LockOnBeam",
+            "weight": 1.0,
+            "cooldown": 1
+          },
+          {
+            "pattern": "Barrage",
+            "weight": 1.0,
+            "cooldown": 1
+          },
+          {
+            "pattern": "Sweep",
+            "weight": 1.0,
+            "cooldown": 1
+          }
+        ]
+      },
+      {
+        "name": "第2形態",
+        "trigger": {
+          "type": "HpRatio",
+          "value": 0.5
+        },
+        "transitionTime": 2.5,
+        "turnSpeedDeg": 100.0,
+        "idleTime": 0.15,
+        "look": {
+          "model": "block/block.obj",
+          "color": [
+            1.0,
+            0.55,
+            0.55,
+            1.0
+          ],
+          "scale": [
+            1.2,
+            1.2,
+            1.2
+          ]
+        },
+        "patterns": [
+          {
+            "pattern": "OmniBomb",
+            "weight": 0.7,
+            "cooldown": 3
+          },
+          {
+            "pattern": "LockOnBeam",
+            "weight": 1.0,
+            "cooldown": 1
+          },
+          {
+            "pattern": "Barrage",
+            "weight": 1.0,
+            "cooldown": 1
+          },
+          {
+            "pattern": "Sweep",
+            "weight": 1.0,
+            "cooldown": 1
+          },
+          {
+            "pattern": "SweepToBeam",
+            "weight": 1.0,
+            "cooldown": 2
+          },
+          {
+            "pattern": "BeamWithBarrage",
+            "weight": 1.0,
+            "cooldown": 2
+          }
+        ]
+      }
+    ],
+    "attacks": {
+      "OmniBomb": {
+        "common": {
+          "telegraphTime": 2.0,
+          "damage": 60.0,
+          "recoveryTime": 3.0
+        },
+        "params": {
+          "radius": 25.0,
+          "riseHeight": 4.0,
+          "blastTime": 0.5,
+          "landTime": 0.6
+        }
+      },
+      "LockOnBeam": {
+        "common": {
+          "telegraphTime": 1.0,
+          "damage": 40.0,
+          "recoveryTime": 1.5
+        },
+        "params": {
+          "trackingTime": 1.5,
+          "evadeTime": 0.8,
+          "beamWidth": 2.0,
+          "fireTime": 1.0,
+          "trackingSpeed": 3.0
+        }
+      },
+      "Barrage": {
+        "common": {
+          "telegraphTime": 1.2,
+          "damage": 10.0,
+          "recoveryTime": 0.8
+        },
+        "params": {
+          "bulletCount": 16,
+          "bulletSpeed": 8.0,
+          "bulletSize": 0.5,
+          "volleyCount": 3,
+          "volleyInterval": 0.6,
+          "volleyAngleShift": 0.5,
+          "portLength": 1.5
+        }
+      },
+      "Sweep": {
+        "common": {
+          "telegraphTime": 1.0,
+          "damage": 30.0,
+          "recoveryTime": 1.5
+        },
+        "params": {
+          "radius": 7.0,
+          "angleDeg": 120.0,
+          "swingTime": 0.3,
+          "windUpDeg": 40.0
+        }
+      }
+    }
+  }
+}

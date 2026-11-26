@@ -1,18 +1,52 @@
 #include "Boss.h"
-#include "BossAttackBarrage.h"
 #include "BossAttackLockOnBeam.h"
 #include "BossAttackOmniBomb.h"
+#include "BossAttackPattern.h"
+#include "BossAttackRegistry.h"
 #include "BossAttackState.h"
 #include "BossAttackSweep.h"
 #include "Camera.h"
+#include "LineManager.h"
+#include "ModelManager.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <numbers>
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
 #endif
 
 using namespace TuboEngine;
+
+namespace {
+constexpr float kPi = std::numbers::pi_v<float>;
+constexpr float kDegToRad = kPi / 180.0f;
+
+// 角度の差を -π〜π に収める
+float WrapAngle(float a) { return std::remainder(a, 2.0f * kPi); }
+
+Math::Vector4 LerpColor(const Math::Vector4& a, const Math::Vector4& b, float t) {
+	return {a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, a.w + (b.w - a.w) * t};
+}
+
+const Math::Vector4 kColorNormal = {1.0f, 1.0f, 1.0f, 1.0f};
+const Math::Vector4 kColorTransition = {1.0f, 0.2f, 0.9f, 1.0f}; // 移行演出の発光色
+const Math::Vector4 kColorDefeated = {0.2f, 0.2f, 0.2f, 1.0f};   // 撃破後
+const Math::Vector4 kColorCore = {0.2f, 1.0f, 1.0f, 1.0f};       // コアの向きの表示
+
+constexpr float kTransitionRise = 1.5f; // 移行演出で浮き上がる高さ
+
+// 保存する小数を小数点以下4桁に丸める（float の誤差で 0.800000011920929 のようにならないように）
+void RoundFloats(JsonManager::Json& json) {
+	if (json.is_number_float()) {
+		json = std::round(json.get<double>() * 10000.0) / 10000.0;
+	} else if (json.is_object() || json.is_array()) {
+		for (JsonManager::Json& child : json) {
+			RoundFloats(child);
+		}
+	}
+}
+} // namespace
 
 Boss::Boss() = default;
 Boss::~Boss() = default;
@@ -21,27 +55,36 @@ Boss::~Boss() = default;
 //  Initialize
 // =============================================================================
 void Boss::Initialize(TuboEngine::Camera* camera, const Math::Vector3& center) {
-	// 見た目（仮モデル）
+	// 見た目（モデルは形態の見た目で差し替える）
 	object_ = std::make_unique<Object3d>();
 	object_->Initialize("block/block.obj");
 	object_->SetCamera(camera);
 	object_->SetScale({1.0f, 1.0f, 1.0f});
+	appliedModel_ = "block/block.obj";
 
 	center_ = center;
-	height_ = 0.0f;
 	yaw_ = 0.0f;
-	color_ = {1.0f, 1.0f, 1.0f, 1.0f};
 
-	// 攻撃ステートの生成
-	omniBomb_ = std::make_unique<BossAttackOmniBomb>();
-	lockOnBeam_ = std::make_unique<BossAttackLockOnBeam>();
-	barrage_ = std::make_unique<BossAttackBarrage>();
-	sweep_ = std::make_unique<BossAttackSweep>();
-	attacks_ = {omniBomb_.get(), lockOnBeam_.get(), barrage_.get(), sweep_.get()};
+	// 攻撃・形態のデータを読み込んで戦闘を始める（ファイルが無ければコードの初期値）
+	LoadData();
+}
 
-	currentAttack_ = nullptr;
-	nextAttackIndex_ = 0;
-	SelectNextAttack();
+// =============================================================================
+//  戦闘のやり直し
+// =============================================================================
+void Boss::Restart() {
+	CancelPattern();
+	requestedPatterns_.clear();
+
+	phaseIndex_ = 0;
+	hp_ = data_.common.maxHp;
+	height_ = 0.0f;
+	color_ = kColorNormal;
+	bodyControlEnabled_ = true;
+
+	ResetPhaseRuntime();
+	ApplyLook(GetPhase().look);
+	EnterIdle(data_.common.firstDelay);
 	ApplyObjectTransform();
 }
 
@@ -51,25 +94,35 @@ void Boss::Initialize(TuboEngine::Camera* camera, const Math::Vector3& center) {
 void Boss::Update(float deltaTime) {
 	const float dt = dePaused_ ? 0.0f : deltaTime * speedScale_;
 
-	// 行動サイクル：攻撃が終わったら次の攻撃を選ぶ
-	if (!currentAttack_ || currentAttack_->IsFinished()) {
-
-		SelectNextAttack();
+	// 移行演出中でなければ、形態の見た目は ImGui での調整もすぐ反映する
+	if (state_ != State::Transition) {
+		ApplyLook(GetPhase().look);
 	}
 
-	//攻撃ステートの更新処理
-	currentAttack_->Update(*this, dt);
+	switch (state_) {
+	case State::Idle:       UpdateIdle(dt);       break;
+	case State::Acting:     UpdateActing(dt);     break;
+	case State::Transition: UpdateTransition(dt); break;
+	case State::Defeated:   UpdateDefeated(dt);   break;
+	}
+
+	// HP 以外のきっかけ（今後足す部位破壊など）もここで毎フレーム調べる
+	CheckPhaseTriggers();
 
 	if (deDrawLines_) {
-
-		//攻撃範囲のライン描画
-		currentAttack_->DrawLines(*this);
+		// 攻撃範囲のライン描画
+		if (currentPattern_) {
+			currentPattern_->DrawLines(*this);
+		}
+		if (state_ != State::Defeated) {
+			DrawCoreLines();
+		}
 	}
 
-	//移動、色の適用
+	// 移動、色の適用
 	ApplyObjectTransform();
 
-	//オブジェクトの更新
+	// オブジェクトの更新
 	object_->Update();
 }
 
@@ -79,30 +132,301 @@ void Boss::Draw() {
 }
 
 // =============================================================================
-//  攻撃の切り替え
+//  行動サイクル
 // =============================================================================
-void Boss::SelectNextAttack() {
+void Boss::EnterIdle(float waitTime) {
+	state_ = State::Idle;
+	stateTimer_ = 0.0f;
+	idleWait_ = waitTime;
+	currentPattern_ = nullptr;
+}
 
-	// TODO: 行動順の制御（4-6）。全方位爆撃は決まったタイミング、残り3種はランダム
-	//       現状は登録順（全方位爆撃 → ロックオンビーム → 弾幕射撃 → 近接薙ぎ払い → …）にくり返す
+// -----------------------------------------------------------------------------
+//  待機：自機の方へ向き直り、待機時間が過ぎて向きがそろったら（または待ちすぎたら）次の攻撃へ
+// -----------------------------------------------------------------------------
+void Boss::UpdateIdle(float deltaTime) {
+	stateTimer_ += deltaTime;
+	TurnTowardTarget(deltaTime);
 
-	//攻撃番号が指定されていたら特定の攻撃の実を繰り返す
-	if (deForcedAttackIndex_ >= 0 && deForcedAttackIndex_ < static_cast<int>(attacks_.size())) {
-
-		ChangeAttack(attacks_[deForcedAttackIndex_]);
-
+	if (stateTimer_ < idleWait_) {
 		return;
 	}
 
-	//次の番号の攻撃に変更
-	ChangeAttack(attacks_[nextAttackIndex_]);
+	const float targetAngle = std::atan2(targetPosition_.z - center_.z, targetPosition_.x - center_.x);
+	const bool facing = std::abs(WrapAngle(targetAngle - GetFacingAngle())) <= data_.common.faceTolDeg * kDegToRad;
+	const bool waitedTooLong = stateTimer_ >= idleWait_ + data_.common.faceMaxWait;
+	if (!facing && !waitedTooLong) {
+		return;
+	}
 
-	nextAttackIndex_ = (nextAttackIndex_ + 1) % attacks_.size();
+	if (BossAttackPattern* next = SelectNextPattern()) {
+		StartPattern(next);
+	}
 }
 
-void Boss::ChangeAttack(BossAttackState* next) {
-	currentAttack_ = next;
-	currentAttack_->Enter(*this);
+void Boss::UpdateActing(float deltaTime) {
+	if (!currentPattern_) {
+		EnterIdle(GetPhase().idleTime);
+		return;
+	}
+	currentPattern_->Update(*this, deltaTime);
+	if (currentPattern_->IsFinished()) {
+		height_ = 0.0f;
+		color_ = kColorNormal;
+		EnterIdle(GetPhase().idleTime);
+	}
+}
+
+// -----------------------------------------------------------------------------
+//  移行演出：浮き上がって光り、途中で見た目を切り替え、降りてから次の形態の待機へ
+// -----------------------------------------------------------------------------
+void Boss::UpdateTransition(float deltaTime) {
+	stateTimer_ += deltaTime;
+	const float duration = GetPhase().transitionTime;
+	const float t = duration > 0.0f ? std::clamp(stateTimer_ / duration, 0.0f, 1.0f) : 1.0f;
+
+	// 半分を過ぎたら新しい形態の見た目に切り替える
+	if (!transitionLookApplied_ && t >= 0.5f) {
+		transitionLookApplied_ = true;
+		ApplyLook(GetPhase().look);
+	}
+
+	// 浮き上がって戻る。だんだん速く点滅する
+	height_ = kTransitionRise * std::sin(kPi * t);
+	const float blink = 0.5f + 0.5f * std::sin(2.0f * kPi * (2.0f + 10.0f * t) * stateTimer_);
+	color_ = LerpColor(kColorNormal, kColorTransition, blink * std::sin(kPi * t));
+
+	if (t >= 1.0f) {
+		height_ = 0.0f;
+		color_ = kColorNormal;
+		ApplyLook(GetPhase().look);
+		EnterIdle(GetPhase().idleTime);
+	}
+}
+
+void Boss::UpdateDefeated(float deltaTime) {
+	stateTimer_ += deltaTime;
+	// 暗くなって少し沈む
+	const float t = std::clamp(stateTimer_ / 1.0f, 0.0f, 1.0f);
+	height_ = -0.5f * t;
+	color_ = LerpColor(kColorNormal, kColorDefeated, t);
+}
+
+// =============================================================================
+//  攻撃の選択
+// =============================================================================
+BossAttackPattern* Boss::SelectNextPattern() {
+	// 1. 外から予約された攻撃（予約順）。見つからない名前は飛ばす
+	while (!requestedPatterns_.empty()) {
+		const std::string name = requestedPatterns_.front();
+		requestedPatterns_.pop_front();
+		BossAttackPattern* pattern = FindPattern(name);
+		if (pattern && pattern->IsValid()) {
+			return pattern;
+		}
+	}
+
+	// 2. デバッグで固定した攻撃
+	if (!deForcedPattern_.empty()) {
+		BossAttackPattern* pattern = FindPattern(deForcedPattern_);
+		if (pattern && pattern->IsValid()) {
+			return pattern;
+		}
+	}
+
+	// 3. 自分では選ばない設定なら、予約が来るまで待機を続ける
+	if (!autoAttack_) {
+		return nullptr;
+	}
+
+	return SelectFromPhase();
+}
+
+BossAttackPattern* Boss::SelectFromPhase() {
+	const std::vector<BossPatternEntry>& entries = GetPhase().patterns;
+	if (cooldowns_.size() != entries.size()) {
+		cooldowns_.assign(entries.size(), 0);
+	}
+
+	// 使える候補（パターンがあり、重みが0より大きい）
+	std::vector<size_t> usable;
+	for (size_t i = 0; i < entries.size(); ++i) {
+		BossAttackPattern* pattern = FindPattern(entries[i].pattern);
+		if (pattern && pattern->IsValid() && entries[i].weight > 0.0f) {
+			usable.push_back(i);
+		}
+	}
+	if (usable.empty()) {
+		return nullptr;
+	}
+
+	// 再使用待ちでない候補。すべて再使用待ちなら、残り回数がいちばん少ないものを候補にする
+	std::vector<size_t> candidates;
+	for (size_t i : usable) {
+		if (cooldowns_[i] <= 0) {
+			candidates.push_back(i);
+		}
+	}
+	if (candidates.empty()) {
+		int minRemain = cooldowns_[usable.front()];
+		for (size_t i : usable) {
+			minRemain = (std::min)(minRemain, cooldowns_[i]);
+		}
+		for (size_t i : usable) {
+			if (cooldowns_[i] == minRemain) {
+				candidates.push_back(i);
+			}
+		}
+	}
+
+	// 重み付きランダム
+	float total = 0.0f;
+	for (size_t i : candidates) {
+		total += entries[i].weight;
+	}
+	std::uniform_real_distribution<float> dist(0.0f, total);
+	float pick = dist(random_);
+	size_t chosen = candidates.back();
+	for (size_t i : candidates) {
+		pick -= entries[i].weight;
+		if (pick <= 0.0f) {
+			chosen = i;
+			break;
+		}
+	}
+
+	// 再使用までの回数：選ぶたびに全員1つ減らし、選ばれたものは設定した回数に戻す
+	for (int& remain : cooldowns_) {
+		remain = (std::max)(remain - 1, 0);
+	}
+	cooldowns_[chosen] = (std::max)(entries[chosen].cooldown, 0);
+
+	return FindPattern(entries[chosen].pattern);
+}
+
+void Boss::StartPattern(BossAttackPattern* pattern) {
+	currentPattern_ = pattern;
+	state_ = State::Acting;
+	stateTimer_ = 0.0f;
+	currentPattern_->Enter(*this);
+	if (onAttackStarted_) {
+		onAttackStarted_(currentPattern_->GetName());
+	}
+}
+
+void Boss::CancelPattern() {
+	if (currentPattern_) {
+		currentPattern_->Cancel(*this);
+		currentPattern_ = nullptr;
+	}
+	bodyControlEnabled_ = true;
+}
+
+// =============================================================================
+//  形態
+// =============================================================================
+void Boss::CheckPhaseTriggers() {
+	if (state_ == State::Transition || state_ == State::Defeated) {
+		return;
+	}
+	const int next = phaseIndex_ + 1;
+	if (next >= static_cast<int>(data_.phases.size())) {
+		return;
+	}
+	if (IsTriggerSatisfied(data_.phases[next].trigger)) {
+		StartTransition(next);
+	}
+}
+
+bool Boss::IsTriggerSatisfied(const BossPhaseTrigger& trigger) const {
+	if (trigger.type == "HpRatio") {
+		return GetHpRatio() <= trigger.value;
+	}
+	// 部位破壊など、新しいきっかけはここに足す
+	return false;
+}
+
+float Boss::GetNextPhaseHpFloor() const {
+	const int next = phaseIndex_ + 1;
+	if (next >= static_cast<int>(data_.phases.size())) {
+		return 0.0f;
+	}
+	const BossPhaseTrigger& trigger = data_.phases[next].trigger;
+	if (trigger.type != "HpRatio") {
+		return 0.0f;
+	}
+	return (std::max)(data_.common.maxHp * trigger.value, 0.0f);
+}
+
+void Boss::StartTransition(int nextPhase) {
+	// 攻撃をすぐに打ち切り、残った弾・攻撃範囲も消す
+	CancelPattern();
+
+	phaseIndex_ = nextPhase;
+	state_ = State::Transition;
+	stateTimer_ = 0.0f;
+	transitionLookApplied_ = false;
+	ResetPhaseRuntime();
+
+	if (onPhaseChanged_) {
+		onPhaseChanged_(phaseIndex_, GetPhase().name);
+	}
+}
+
+void Boss::Defeat() {
+	CancelPattern();
+	state_ = State::Defeated;
+	stateTimer_ = 0.0f;
+	hp_ = 0.0f;
+	if (onDefeated_) {
+		onDefeated_();
+	}
+}
+
+void Boss::ResetPhaseRuntime() {
+	cooldowns_.assign(GetPhase().patterns.size(), 0);
+}
+
+void Boss::ApplyLook(const BossLookData& look) {
+	look_ = look;
+	// モデルの差し替え（変わったときだけ）
+	if (!look_.model.empty() && look_.model != appliedModel_) {
+		ModelManager::GetInstance()->LoadModel(look_.model);
+		if (ModelManager::GetInstance()->FindModel(look_.model)) {
+			object_->SetModel(look_.model);
+			appliedModel_ = look_.model;
+		}
+	}
+}
+
+// =============================================================================
+//  ダメージ
+// =============================================================================
+Boss::DamageResult Boss::TakeDamage(float damage, const Math::Vector3& attackerPosition) {
+	if (IsInvincible() || damage <= 0.0f) {
+		return DamageResult::Ignored;
+	}
+	// 背中のコアの向きからでなければ弾く
+	if (!IsInCoreArc(attackerPosition)) {
+		return DamageResult::Blocked;
+	}
+
+	// 次の形態の閾値より下には一度に削れない（超えた分は持ち越さない）
+	const float floorHp = (std::min)(GetNextPhaseHpFloor(), hp_);
+	hp_ = (std::max)(hp_ - damage, floorHp);
+	hp_ = (std::max)(hp_, 0.0f);
+
+	CheckPhaseTriggers();
+	if (hp_ <= 0.0f && state_ != State::Transition) {
+		Defeat();
+	}
+	return DamageResult::Hit;
+}
+
+bool Boss::IsInCoreArc(const Math::Vector3& position) const {
+	const float angle = std::atan2(position.z - center_.z, position.x - center_.x);
+	const float backAngle = GetFacingAngle() + kPi;
+	return std::abs(WrapAngle(angle - backAngle)) <= data_.common.coreArcDeg * 0.5f * kDegToRad;
 }
 
 // =============================================================================
@@ -111,32 +435,33 @@ void Boss::ChangeAttack(BossAttackState* next) {
 //  yaw = π/2 − θ で対応させる
 // =============================================================================
 void Boss::SetFacingAngle(float angle) {
-
-	yaw_ = std::numbers::pi_v<float> * 0.5f - angle;
+	if (!bodyControlEnabled_) {
+		return;
+	}
+	yaw_ = kPi * 0.5f - angle;
 }
 
 float Boss::GetFacingAngle() const {
 
-	return std::numbers::pi_v<float> * 0.5f - yaw_;
+	return kPi * 0.5f - yaw_;
 }
 
 void Boss::TurnTowardTarget(float deltaTime) {
-
-	constexpr float kPi = std::numbers::pi_v<float>;
+	if (!bodyControlEnabled_) {
+		return;
+	}
 
 	const float targetAngle = std::atan2(targetPosition_.z - center_.z, targetPosition_.x - center_.x);
 
-	float diff = targetAngle - GetFacingAngle();
-
 	// -π〜π に収めて近い方へ回る
-	diff = std::remainder(diff, 2.0f * kPi);
+	const float diff = WrapAngle(targetAngle - GetFacingAngle());
 
-	const float maxStep = turnSpeed_ * deltaTime;
+	const float maxStep = GetPhase().turnSpeedDeg * kDegToRad * deltaTime;
 
 	SetFacingAngle(GetFacingAngle() + std::clamp(diff, -maxStep, maxStep));
 
 	// 角度が大きくなり続けないように yaw を -π〜π に戻す
-	yaw_ = std::remainder(yaw_, 2.0f * kPi);
+	yaw_ = WrapAngle(yaw_);
 }
 
 // =============================================================================
@@ -144,11 +469,171 @@ void Boss::TurnTowardTarget(float deltaTime) {
 // =============================================================================
 void Boss::ApplyObjectTransform() {
 
-	object_->SetPosition({center_.x, center_.y + baseHeight_ + height_, center_.z});
+	// 大きさに合わせて持ち上げ、底が地面に付くようにする
+	object_->SetScale(look_.scale);
+
+	object_->SetPosition({center_.x, center_.y + baseHeight_ * look_.scale.y + height_, center_.z});
 
 	object_->SetRotation({0.0f, yaw_, 0.0f});
 
-	object_->SetModelColor(color_);
+	// 攻撃の演出の色 × 形態の色
+	object_->SetModelColor({color_.x * look_.color.x, color_.y * look_.color.y, color_.z * look_.color.z, color_.w * look_.color.w});
+}
+
+void Boss::DrawCoreLines() const {
+	// 背中のコアを狙える範囲の両端を、ボスの後ろに短い線で示す
+	const float back = GetFacingAngle() + kPi;
+	const float half = data_.common.coreArcDeg * 0.5f * kDegToRad;
+	const float r0 = 1.2f * look_.scale.x;
+	const float r1 = r0 + 2.5f;
+	const float y = center_.y + 0.1f;
+	LineManager* lm = LineManager::GetInstance();
+	for (float a : {back - half, back + half}) {
+		lm->DrawLine({center_.x + std::cos(a) * r0, y, center_.z + std::sin(a) * r0}, {center_.x + std::cos(a) * r1, y, center_.z + std::sin(a) * r1}, kColorCore);
+	}
+	// 真後ろ（コアの位置）
+	lm->DrawLine({center_.x + std::cos(back) * r0, y, center_.z + std::sin(back) * r0}, {center_.x + std::cos(back) * (r0 + 1.0f), y, center_.z + std::sin(back) * (r0 + 1.0f)}, kColorCore);
+}
+
+// =============================================================================
+//  データ（Resources/Boss.json）
+//  { "default": {...}, "current": {...} }。読み込みは current を優先し、無ければ default
+// =============================================================================
+bool Boss::LoadData() {
+	JsonManager::Json file;
+	const bool loaded = JsonManager::Load(kBossJsonPath, file, /*logIfMissing*/ false) && file.is_object();
+
+	if (loaded && file.contains("default") && file["default"].is_object()) {
+		defaultJson_ = file["default"];
+	} else {
+		// ファイルが無い・default が無いときは、コードの初期値を default にする
+		ApplyJson(JsonManager::Json::object());
+		defaultJson_ = BuildJson();
+	}
+
+	if (loaded && file.contains("current") && file["current"].is_object()) {
+		ApplyJson(file["current"]);
+	} else {
+		ApplyJson(defaultJson_);
+	}
+
+	deDataMessage_ = loaded ? "読み込みました" : "ファイルが無いので初期値を使っています（Save で作成）";
+	return loaded;
+}
+
+bool Boss::SaveData() {
+	JsonManager::Json file;
+	file["default"] = defaultJson_;
+	file["current"] = BuildJson();
+	RoundFloats(file);
+	const bool saved = JsonManager::Save(kBossJsonPath, file);
+	deDataMessage_ = saved ? "保存しました" : "保存に失敗しました";
+	return saved;
+}
+
+bool Boss::ResetDataToDefault() {
+	ApplyJson(defaultJson_);
+	const bool saved = SaveData();
+	deDataMessage_ = saved ? "初期値に戻して保存しました" : "保存に失敗しました";
+	return saved;
+}
+
+void Boss::ApplyJson(const JsonManager::Json& json) {
+	// 攻撃中のものを片付けてから、攻撃を作り直す（数値をコードの初期値に戻してから JSON を反映するため）
+	CancelPattern();
+	attacks_ = BossAttackRegistry::CreateAll();
+
+	BossData data;
+	JsonManager::Read(json, "common", data.common);
+	JsonManager::Read(json, "patterns", data.patterns);
+	JsonManager::Read(json, "phases", data.phases);
+	data_ = std::move(data);
+
+	if (json.is_object() && json.contains("attacks") && json["attacks"].is_object()) {
+		const JsonManager::Json& attacksJson = json["attacks"];
+		for (const std::unique_ptr<BossAttackState>& attack : attacks_) {
+			if (attacksJson.contains(attack->GetId())) {
+				attack->LoadParams(attacksJson[attack->GetId()]);
+			}
+		}
+	}
+
+	EnsurePhases();
+	RebuildPatterns();
+	Restart();
+}
+
+JsonManager::Json Boss::BuildJson() const {
+	JsonManager::Json json;
+	json["common"] = data_.common;
+	json["patterns"] = data_.patterns;
+	json["phases"] = data_.phases;
+	JsonManager::Json attacksJson = JsonManager::Json::object();
+	for (const std::unique_ptr<BossAttackState>& attack : attacks_) {
+		JsonManager::Json params;
+		attack->SaveParams(params);
+		attacksJson[attack->GetId()] = params;
+	}
+	json["attacks"] = attacksJson;
+	return json;
+}
+
+void Boss::EnsurePhases() {
+	if (!data_.phases.empty()) {
+		return;
+	}
+	BossPhaseData phase;
+	phase.name = "Phase1";
+	for (const std::unique_ptr<BossAttackState>& attack : attacks_) {
+		phase.patterns.push_back({attack->GetId(), 1.0f, 1});
+	}
+	data_.phases.push_back(phase);
+}
+
+void Boss::RebuildPatterns() {
+	patterns_.clear();
+	currentPattern_ = nullptr;
+
+	// 攻撃名はそのまま単発のパターンとして使える
+	for (const std::unique_ptr<BossAttackState>& attack : attacks_) {
+		patterns_.push_back(std::make_unique<BossAttackPattern>(attack->GetId(), BossAttackPattern::Type::Single, std::vector<BossAttackState*>{attack.get()}));
+	}
+
+	// JSON で定義した連続技・同時攻撃
+	for (const BossPatternData& data : data_.patterns) {
+		std::vector<BossAttackState*> attacks;
+		std::string error;
+		for (const std::string& id : data.attacks) {
+			if (BossAttackState* attack = FindAttack(id)) {
+				attacks.push_back(attack);
+			} else if (error.empty()) {
+				error = "知らない攻撃名です: " + id;
+			}
+		}
+		if (FindPattern(data.name)) {
+			error = "同じ名前のパターン・攻撃がすでにあります: " + data.name;
+		}
+		patterns_.push_back(std::make_unique<BossAttackPattern>(data.name, BossAttackPattern::TypeFromString(data.type), std::move(attacks), error));
+	}
+}
+
+BossAttackState* Boss::FindAttack(const std::string& id) const {
+	for (const std::unique_ptr<BossAttackState>& attack : attacks_) {
+		if (id == attack->GetId()) {
+			return attack.get();
+		}
+	}
+	return nullptr;
+}
+
+BossAttackPattern* Boss::FindPattern(const std::string& name) const {
+	// 同じ名前があれば先に登録したもの（攻撃名の単発）を使う
+	for (const std::unique_ptr<BossAttackPattern>& pattern : patterns_) {
+		if (pattern->GetName() == name) {
+			return pattern.get();
+		}
+	}
+	return nullptr;
 }
 
 // =============================================================================
@@ -167,67 +652,207 @@ void Boss::DrawImGui() {
 		return;
 	}
 
-	static const char* kStepNames[] = {"Telegraph (予兆)", "Attack (攻撃)", "Recovery (硬直)", "Finished"};
-
-	if (currentAttack_) {
-
-		ImGui::Text("Attack : %s", currentAttack_->GetName());
-
-		ImGui::Text("Step   : %s", kStepNames[static_cast<int>(currentAttack_->GetStep())]);
-
-		ImGui::Text("Timer  : %.2f", currentAttack_->GetStepTimer());
-	}
-
-	ImGui::Checkbox("Pause", &dePaused_);
-
-	ImGui::SameLine();
-
-	ImGui::Checkbox("Draw lines", &deDrawLines_);
-
-	if (ImGui::Button("Restart attack") && currentAttack_) {
-
-		currentAttack_->Enter(*this);
-	}
-
-	ImGui::DragFloat("Speed scale", &speedScale_, 0.01f, 0.1f, 3.0f);
-
-	ImGui::DragFloat("Turn speed (rad/s)", &turnSpeed_, 0.01f, 0.0f, 10.0f);
-
-	// デバッグ：出す攻撃を固定する
-	std::vector<const char*> items = {"Loop (順番)"};
-
-	for (BossAttackState* attack : attacks_) {
-
-		items.push_back(attack->GetName());
-	}
-
-	int selected = deForcedAttackIndex_ + 1;
-
-	if (ImGui::Combo("Attack select", &selected, items.data(), static_cast<int>(items.size()))) {
-
-		deForcedAttackIndex_ = selected - 1;
-	}
+	DrawImGuiStatus();
 
 	ImGui::Separator();
 
-	for (BossAttackState* attack : attacks_) {
-
-		attack->DrawImGui();
-	}
-
-	// 仕様：爆撃の半径 ≥ ステージ半径（避けられない）
-	if (omniBomb_->GetParams().radius < stageRadius_) {
-
-		ImGui::TextColored({1.0f, 0.3f, 0.3f, 1.0f}, "全方位爆撃の半径がステージ半径(%.1f)未満です", stageRadius_);
-	}
-
-	// 仕様：扇の半径 ＜ ステージ半径（離れれば避けられる）
-	if (sweep_->GetParams().radius >= stageRadius_) {
-
-		ImGui::TextColored({1.0f, 0.3f, 0.3f, 1.0f}, "薙ぎ払いの半径がステージ半径(%.1f)以上です", stageRadius_);
-	}
+	DrawImGuiData();
 
 	ImGui::End();
 
+#endif
+}
+
+void Boss::DrawImGuiStatus() {
+#ifdef USE_IMGUI
+	static const char* kStateNames[] = {"Idle (待機)", "Acting (攻撃中)", "Transition (移行演出・無敵)", "Defeated (撃破)"};
+	static const char* kStepNames[] = {"Telegraph (予兆)", "Attack (攻撃)", "Recovery (硬直)", "Hold (同時攻撃の待ち)", "Finished"};
+
+	// ---- 状態 ----
+	ImGui::Text("Phase  : %d / %d  %s", phaseIndex_ + 1, static_cast<int>(data_.phases.size()), GetPhase().name.c_str());
+	ImGui::Text("State  : %s", kStateNames[static_cast<int>(state_)]);
+
+	const float ratio = GetHpRatio();
+	char hpText[64];
+	snprintf(hpText, sizeof(hpText), "HP %.0f / %.0f", hp_, data_.common.maxHp);
+	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.9f, 0.3f, 0.1f, 1.0f));
+	ImGui::ProgressBar(ratio, ImVec2(-1.0f, 0.0f), hpText);
+	ImGui::PopStyleColor();
+	// 次の形態の閾値
+	if (const float floorHp = GetNextPhaseHpFloor(); floorHp > 0.0f) {
+		ImGui::Text("次の形態まで : HP %.0f 以下", floorHp);
+	}
+
+	if (currentPattern_) {
+		ImGui::Text("Pattern: %s (%s)", currentPattern_->GetName().c_str(), BossAttackPattern::TypeToString(currentPattern_->GetType()));
+		if (const BossAttackState* attack = currentPattern_->GetCurrentAttack()) {
+			ImGui::Text("Attack : %s", attack->GetName());
+			ImGui::Text("Step   : %s  %.2f", kStepNames[static_cast<int>(attack->GetStep())], attack->GetStepTimer());
+		}
+	}
+
+	// ---- デバッグ ----
+	ImGui::Checkbox("Pause", &dePaused_);
+	ImGui::SameLine();
+	ImGui::Checkbox("Draw lines", &deDrawLines_);
+	ImGui::SameLine();
+	ImGui::Checkbox("Auto attack", &autoAttack_);
+	ImGui::DragFloat("Speed scale", &speedScale_, 0.01f, 0.1f, 3.0f);
+
+	if (ImGui::Button("Restart battle")) {
+		Restart();
+	}
+	ImGui::SameLine();
+	const bool canAdvance = phaseIndex_ + 1 < static_cast<int>(data_.phases.size()) && !IsInvincible();
+	if (ImGui::Button("Next phase") && canAdvance) {
+		const float floorHp = GetNextPhaseHpFloor();
+		if (floorHp > 0.0f) {
+			hp_ = (std::min)(hp_, floorHp); // HP を閾値まで下げて、きっかけと同じ流れで移行する
+		}
+		StartTransition(phaseIndex_ + 1);
+	}
+
+	// ダメージのテスト（自機の攻撃ができるまでの確認用）
+	ImGui::DragFloat("Test damage", &deTestDamage_, 1.0f, 0.0f, 10000.0f);
+	auto testHit = [this](float angleOffset, const char* label) {
+		const float a = GetFacingAngle() + angleOffset;
+		const Math::Vector3 from = {center_.x + std::cos(a) * 10.0f, center_.y, center_.z + std::sin(a) * 10.0f};
+		static const char* kResultNames[] = {"Hit (コアに命中)", "Blocked (弾かれた)", "Ignored (無敵など)"};
+		deLastDamage_ = std::string(label) + " → " + kResultNames[static_cast<int>(TakeDamage(deTestDamage_, from))];
+	};
+	if (ImGui::Button("Hit from back (core)")) {
+		testHit(kPi, "背中から");
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Hit from front")) {
+		testHit(0.0f, "正面から");
+	}
+	if (!deLastDamage_.empty()) {
+		ImGui::Text("%s", deLastDamage_.c_str());
+	}
+	ImGui::Text("自機の位置 : %s", IsInCoreArc(targetPosition_) ? "コアを狙える" : "正面（弾かれる）");
+
+	// 出す攻撃を固定する（形態の抽選の代わり）
+	std::vector<const char*> items = {"Phase (形態の抽選)"};
+	int selected = 0;
+	for (const std::unique_ptr<BossAttackPattern>& pattern : patterns_) {
+		items.push_back(pattern->GetName().c_str());
+		if (pattern->GetName() == deForcedPattern_) {
+			selected = static_cast<int>(items.size()) - 1;
+		}
+	}
+	if (ImGui::Combo("Force pattern", &selected, items.data(), static_cast<int>(items.size()))) {
+		deForcedPattern_ = selected == 0 ? std::string() : patterns_[selected - 1]->GetName();
+	}
+#endif
+}
+
+void Boss::DrawImGuiData() {
+#ifdef USE_IMGUI
+	// ---- 保存・読み込み ----
+	if (ImGui::Button("Save")) {
+		SaveData();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Reload")) {
+		LoadData();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Reset to default")) {
+		ResetDataToDefault();
+	}
+	if (!deDataMessage_.empty()) {
+		ImGui::Text("%s", deDataMessage_.c_str());
+	}
+	ImGui::TextDisabled("形態・パターンの追加や削除は %s を書き換えて Reload", kBossJsonPath);
+
+	// ---- ボス共通 ----
+	if (ImGui::CollapsingHeader("Common (ボス共通)")) {
+		ImGui::DragFloat("Max HP", &data_.common.maxHp, 10.0f, 1.0f, 100000.0f);
+		ImGui::DragFloat("Core arc (deg)", &data_.common.coreArcDeg, 1.0f, 0.0f, 360.0f);
+		ImGui::DragFloat("Face tolerance (deg)", &data_.common.faceTolDeg, 0.5f, 0.0f, 180.0f);
+		ImGui::DragFloat("Face max wait", &data_.common.faceMaxWait, 0.05f, 0.0f, 10.0f);
+		ImGui::DragFloat("First delay", &data_.common.firstDelay, 0.05f, 0.0f, 10.0f);
+		hp_ = (std::min)(hp_, data_.common.maxHp);
+	}
+
+	// ---- 形態 ----
+	if (ImGui::CollapsingHeader("Phases (形態)", ImGuiTreeNodeFlags_DefaultOpen)) {
+		for (size_t p = 0; p < data_.phases.size(); ++p) {
+			BossPhaseData& phase = data_.phases[p];
+			ImGui::PushID(static_cast<int>(p));
+			const bool current = static_cast<int>(p) == phaseIndex_;
+			if (ImGui::TreeNodeEx("phase", current ? ImGuiTreeNodeFlags_DefaultOpen : 0, "%d: %s%s", static_cast<int>(p) + 1, phase.name.c_str(), current ? "  ← いま" : "")) {
+				if (p > 0) {
+					ImGui::Text("Trigger : %s", phase.trigger.type.c_str());
+					if (phase.trigger.type == "HpRatio") {
+						ImGui::SliderFloat("HP ratio", &phase.trigger.value, 0.0f, 1.0f, "%.2f");
+					} else {
+						ImGui::TextColored({1.0f, 0.3f, 0.3f, 1.0f}, "知らないきっかけです（移行しません）");
+					}
+					ImGui::DragFloat("Transition time", &phase.transitionTime, 0.05f, 0.0f, 10.0f);
+				}
+				ImGui::DragFloat("Turn speed (deg/s)", &phase.turnSpeedDeg, 1.0f, 0.0f, 720.0f);
+				ImGui::DragFloat("Idle time", &phase.idleTime, 0.01f, 0.0f, 10.0f);
+				ImGui::Text("Model : %s", phase.look.model.c_str());
+				ImGui::ColorEdit4("Color", &phase.look.color.x);
+				ImGui::DragFloat3("Scale", &phase.look.scale.x, 0.01f, 0.1f, 20.0f);
+
+				ImGui::Text("Patterns (重み / 再使用までの回数)");
+				for (size_t e = 0; e < phase.patterns.size(); ++e) {
+					BossPatternEntry& entry = phase.patterns[e];
+					ImGui::PushID(static_cast<int>(e));
+					const BossAttackPattern* pattern = FindPattern(entry.pattern);
+					if (!pattern || !pattern->IsValid()) {
+						ImGui::TextColored({1.0f, 0.3f, 0.3f, 1.0f}, "%s : %s", entry.pattern.c_str(), pattern ? pattern->GetError().c_str() : "見つかりません");
+					} else {
+						const int remain = current && e < cooldowns_.size() ? cooldowns_[e] : 0;
+						ImGui::Text("%s%s", entry.pattern.c_str(), remain > 0 ? "  (再使用待ち)" : "");
+					}
+					ImGui::SetNextItemWidth(120.0f);
+					ImGui::DragFloat("Weight", &entry.weight, 0.05f, 0.0f, 100.0f);
+					ImGui::SameLine();
+					ImGui::SetNextItemWidth(120.0f);
+					ImGui::DragInt("Cooldown", &entry.cooldown, 0.1f, 0, 20);
+					ImGui::PopID();
+				}
+				ImGui::TreePop();
+			}
+			ImGui::PopID();
+		}
+	}
+
+	// ---- 連続技・同時攻撃 ----
+	if (ImGui::CollapsingHeader("Patterns (連続技・同時攻撃)")) {
+		for (const std::unique_ptr<BossAttackPattern>& pattern : patterns_) {
+			if (pattern->GetType() == BossAttackPattern::Type::Single && pattern->IsValid()) {
+				continue; // 攻撃名の単発は省略
+			}
+			std::string attacks;
+			for (const BossAttackState* attack : pattern->GetAttacks()) {
+				attacks += (attacks.empty() ? "" : (pattern->GetType() == BossAttackPattern::Type::Parallel ? " + " : " → ")) + std::string(attack->GetId());
+			}
+			ImGui::Text("%s [%s] %s", pattern->GetName().c_str(), BossAttackPattern::TypeToString(pattern->GetType()), attacks.c_str());
+			if (!pattern->IsValid()) {
+				ImGui::TextColored({1.0f, 0.3f, 0.3f, 1.0f}, "  %s", pattern->GetError().c_str());
+			}
+		}
+	}
+
+	// ---- 攻撃ごとの数値 ----
+	if (ImGui::CollapsingHeader("Attacks (攻撃ごとの数値)")) {
+		for (const std::unique_ptr<BossAttackState>& attack : attacks_) {
+			attack->DrawImGui();
+		}
+
+		// 仕様：爆撃の半径 ≥ ステージ半径（避けられない）
+		if (auto* bomb = dynamic_cast<BossAttackOmniBomb*>(FindAttack("OmniBomb")); bomb && bomb->GetParams().radius < stageRadius_) {
+			ImGui::TextColored({1.0f, 0.3f, 0.3f, 1.0f}, "全方位爆撃の半径がステージ半径(%.1f)未満です", stageRadius_);
+		}
+		// 仕様：扇の半径 ＜ ステージ半径（離れれば避けられる）
+		if (auto* sweep = dynamic_cast<BossAttackSweep*>(FindAttack("Sweep")); sweep && sweep->GetParams().radius >= stageRadius_) {
+			ImGui::TextColored({1.0f, 0.3f, 0.3f, 1.0f}, "薙ぎ払いの半径がステージ半径(%.1f)以上です", stageRadius_);
+		}
+	}
 #endif
 }

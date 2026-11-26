@@ -36,6 +36,27 @@ namespace {
 
 } // namespace
 
+// 固有パラメータの JSON 変換（Resources/Boss.json の "attacks" → "Barrage" → "params"）
+#define BARRAGE_PARAM_FIELDS(X)	\
+	X("bulletCount", bulletCount)	\
+	X("bulletSpeed", bulletSpeed)	\
+	X("bulletSize", bulletSize)	\
+	X("volleyCount", volleyCount)	\
+	X("volleyInterval", volleyInterval)	\
+	X("volleyAngleShift", volleyAngleShift)	\
+	X("portLength", portLength)
+TUBO_JSON_DEFINE(BossAttackBarrage::Params, BARRAGE_PARAM_FIELDS)
+
+void BossAttackBarrage::SaveParams(JsonManager::Json& json) const {
+	BossAttackState::SaveParams(json);
+	json["params"] = params_;
+}
+
+void BossAttackBarrage::LoadParams(const JsonManager::Json& json) {
+	BossAttackState::LoadParams(json);
+	JsonManager::Read(json, "params", params_);
+}
+
 BossAttackBarrage::BossAttackBarrage() {
 
 	// 共通パラメータの初期値（ダメージは弾1発ぶん、硬直は「短い」）

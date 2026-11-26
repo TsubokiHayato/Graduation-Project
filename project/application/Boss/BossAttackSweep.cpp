@@ -35,6 +35,24 @@ const Math::Vector4 kColorWarning = {1.0f, 0.1f, 0.1f, 1.0f}; // 赤い警告表
 const Math::Vector4 kColorArm = {1.0f, 0.8f, 0.3f, 1.0f};     // 腕
 } // namespace
 
+// 固有パラメータの JSON 変換（Resources/Boss.json の "attacks" → "Sweep" → "params"）
+#define SWEEP_PARAM_FIELDS(X)	\
+	X("radius", radius)	\
+	X("angleDeg", angleDeg)	\
+	X("swingTime", swingTime)	\
+	X("windUpDeg", windUpDeg)
+TUBO_JSON_DEFINE(BossAttackSweep::Params, SWEEP_PARAM_FIELDS)
+
+void BossAttackSweep::SaveParams(JsonManager::Json& json) const {
+	BossAttackState::SaveParams(json);
+	json["params"] = params_;
+}
+
+void BossAttackSweep::LoadParams(const JsonManager::Json& json) {
+	BossAttackState::LoadParams(json);
+	JsonManager::Read(json, "params", params_);
+}
+
 BossAttackSweep::BossAttackSweep() {
 	// 共通パラメータの初期値（硬直は「中程度」）
 	common_.telegraphTime = 1.0f;
@@ -66,7 +84,8 @@ float BossAttackSweep::ArmOffset() const {
 	switch (GetStep()) {
 	case Step::Telegraph: return windUp * Easing::OutCubic(StepProgress(GetTelegraphDuration()));
 	case Step::Attack:    return windUp + (-half - windUp) * Easing::OutCubic(StepProgress(params_.swingTime));
-	case Step::Recovery:  return -half;
+	case Step::Recovery:
+	case Step::Hold:      return -half;
 	default:              return 0.0f;
 	}
 }

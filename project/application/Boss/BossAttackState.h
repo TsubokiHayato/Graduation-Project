@@ -1,4 +1,5 @@
 #pragma once
+#include "JsonManager.h"
 #include "Vector3.h"
 #include "Vector4.h"
 
@@ -9,6 +10,16 @@ class Boss;
 //  ボスの攻撃ステートの基底クラス。
 //  仕様書「4-3. 行動の基本サイクル」の 予兆 → 攻撃 → 硬直 の進行をここで共通化し、
 //  攻撃ごとの動きは派生クラスで各段階の処理（UpdateTelegraph など）を実装する。
+//
+//  新しい攻撃の追加手順：
+//    1. この基底クラスを継承したクラスを作る（GetId / GetName / 各段階の処理 / 固有パラメータの JSON）
+//    2. BossAttackRegistry.cpp の一覧に1行足す
+//    3. Resources/Boss.json の形態の攻撃一覧に、GetId() の名前で追加する
+//
+//  連続技・同時攻撃（BossAttackPattern）から使うための設定：
+//    ・SetSkipRecovery    ：攻撃段階が終わったら硬直せずに終わる（連続技の途中、同時攻撃の従）
+//    ・SetHoldBeforeRecovery：攻撃段階が終わったら ReleaseHold まで待ってから硬直する（同時攻撃の主）
+//    ・SetControlsBody    ：ボスの向き・高さ・色を動かしてよいか（同時攻撃の従は false）
 // =============================================================================
 class BossAttackState {
 public:
@@ -17,6 +28,7 @@ public:
 		Telegraph, // 予兆
 		Attack,    // 攻撃
 		Recovery,  // 硬直
+		Hold,      // 同時攻撃で、ほかの攻撃が終わるのを待っている（主の攻撃段階の後）
 		Finished,  // 終了（ボスが次の攻撃を選ぶ）
 	};
 
@@ -30,6 +42,8 @@ public:
 public:
 	virtual ~BossAttackState() = default;
 
+	// 攻撃の識別名（JSON で使う名前。例："Sweep"）
+	virtual const char* GetId() const = 0;
 	// 攻撃の名前（ImGui 表示用）
 	virtual const char* GetName() const = 0;
 
@@ -37,10 +51,24 @@ public:
 	void Enter(Boss& boss);
 	// 毎フレーム呼ぶ
 	void Update(Boss& boss, float deltaTime);
+	// 途中で打ち切る（形態移行・撃破時）。弾などの残りも消す
+	void Cancel(Boss& boss);
 	// 警告範囲などのライン描画（Update の後に呼ぶ）
 	virtual void DrawLines(const Boss& boss) const { (void)boss; }
 	// パラメータ調整用
 	void DrawImGui();
+
+	// ---- 連続技・同時攻撃用の設定（Enter の前に設定する） ----
+	void SetSkipRecovery(bool skip) { skipRecovery_ = skip; }
+	void SetHoldBeforeRecovery(bool hold) { holdBeforeRecovery_ = hold; }
+	void SetControlsBody(bool controls) { controlsBody_ = controls; }
+	// 同時攻撃の主：待機（Hold）をやめて硬直に入る
+	void ReleaseHold() { holdReleased_ = true; }
+
+	// ---- パラメータの保存・読み込み（Resources/Boss.json の "attacks" の中身） ----
+	// 派生クラスは基底を呼んだうえで固有パラメータ（"params"）を読み書きする
+	virtual void SaveParams(TuboEngine::JsonManager::Json& json) const;
+	virtual void LoadParams(const TuboEngine::JsonManager::Json& json);
 
 	bool IsFinished() const { return step_ == Step::Finished; }
 	Step GetStep() const { return step_; }
@@ -55,6 +83,9 @@ protected:
 	virtual void UpdateTelegraph(Boss& boss, float t) = 0;
 	virtual void UpdateAttack(Boss& boss, float t) = 0;
 	virtual void UpdateRecovery(Boss& boss, float t) { (void)boss; (void)t; }
+	// 同時攻撃の主が、ほかの攻撃の終わりを待っている間（既定は何もしない＝姿勢を保つ）
+	virtual void UpdateHold(Boss& boss) { (void)boss; }
+	// 攻撃の終わり（硬直の後、または打ち切り時）。弾などはここで片付ける
 	virtual void OnExit(Boss& boss) { (void)boss; }
 
 	// 予兆段階の長さ。既定は共通パラメータの予兆時間
@@ -79,9 +110,18 @@ protected:
 
 private:
 	void ChangeStep(Boss& boss, Step next);
+	// 段階の時間が過ぎたときの次の段階へ進む処理
+	void AdvanceStep(Boss& boss);
+	void Finish(Boss& boss);
 	float GetStepDuration(Step step) const;
 
 	Step step_ = Step::Finished;
 	float stepTimer_ = 0.0f;
 	float deltaTime_ = 0.0f;
+
+	// 連続技・同時攻撃用
+	bool skipRecovery_ = false;
+	bool holdBeforeRecovery_ = false;
+	bool holdReleased_ = false;
+	bool controlsBody_ = true;
 };

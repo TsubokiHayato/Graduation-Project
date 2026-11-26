@@ -35,6 +35,25 @@ const Math::Vector4 kColorWarning = {1.0f, 0.1f, 0.1f, 1.0f}; // 赤い警告表
 const Math::Vector4 kColorBeam = {0.4f, 0.9f, 1.0f, 1.0f};    // ビーム
 } // namespace
 
+// 固有パラメータの JSON 変換（Resources/Boss.json の "attacks" → "LockOnBeam" → "params"）
+#define LOCKONBEAM_PARAM_FIELDS(X)	\
+	X("trackingTime", trackingTime)	\
+	X("evadeTime", evadeTime)	\
+	X("beamWidth", beamWidth)	\
+	X("fireTime", fireTime)	\
+	X("trackingSpeed", trackingSpeed)
+TUBO_JSON_DEFINE(BossAttackLockOnBeam::Params, LOCKONBEAM_PARAM_FIELDS)
+
+void BossAttackLockOnBeam::SaveParams(JsonManager::Json& json) const {
+	BossAttackState::SaveParams(json);
+	json["params"] = params_;
+}
+
+void BossAttackLockOnBeam::LoadParams(const JsonManager::Json& json) {
+	BossAttackState::LoadParams(json);
+	JsonManager::Read(json, "params", params_);
+}
+
 BossAttackLockOnBeam::BossAttackLockOnBeam() {
 	// 共通パラメータの初期値（硬直は「中程度」）。予兆時間は 追尾時間＋回避猶予 で決まる
 	common_.damage = 40.0f;

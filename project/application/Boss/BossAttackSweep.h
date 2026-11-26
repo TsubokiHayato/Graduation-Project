@@ -25,8 +25,11 @@ public:
 public:
 	BossAttackSweep();
 
+	const char* GetId() const override { return "Sweep"; }
 	const char* GetName() const override { return "近接薙ぎ払い (Sweep)"; }
 	void DrawLines(const Boss& boss) const override;
+	void SaveParams(TuboEngine::JsonManager::Json& json) const override;
+	void LoadParams(const TuboEngine::JsonManager::Json& json) override;
 
 	Params& GetParams() { return params_; }
 	bool GetLastHitResult() const { return lastHitResult_; }

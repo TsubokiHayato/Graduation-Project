@@ -1,28 +1,42 @@
 #pragma once
+#include "BossData.h"
+#include "JsonManager.h"
 #include "Object3d.h"
 #include "Vector3.h"
 #include "Vector4.h"
+#include <deque>
 #include <functional>
 #include <memory>
+#include <random>
+#include <string>
 #include <vector>
 
 namespace TuboEngine {
 class Camera;
 }
 class BossAttackState;
-class BossAttackOmniBomb;
-class BossAttackLockOnBeam;
-class BossAttackBarrage;
-class BossAttackSweep;
+class BossAttackPattern;
+
+// JSONファイルのパス
+inline constexpr char kBossJsonPath[] = "Resources/Boss.json";
 
 // =============================================================================
 //  Boss
 //  仕様書「4. ボス」のボス本体。
-//  見た目のオブジェクト（block）を持ち、攻撃の選択と攻撃ステートの切り替えを行う。
-//  各攻撃の動き（予兆 → 攻撃 → 硬直）は BossAttackState の派生クラスに分けている。
+//  見た目のオブジェクトを持ち、行動サイクル・攻撃の抽選・形態（フェーズ）・HPとコア判定を行う。
 //
-//  実装済みの攻撃： 全方位爆撃（BossAttackOmniBomb）、ロックオンビーム（BossAttackLockOnBeam）、
-//                   弾幕射撃（BossAttackBarrage）、近接薙ぎ払い（BossAttackSweep）
+//  行動サイクル：待機（自機の方を向く）→ 攻撃（予兆 → 攻撃 → 硬直）→ 待機 → …
+//    ・攻撃は BossAttackState の派生クラス。BossAttackRegistry に並んだものをすべて持つ
+//    ・1回の行動は BossAttackPattern（単発・連続技・同時攻撃）。形態ごとの重み付きランダムで選ぶ
+//
+//  形態：Resources/Boss.json の "phases" を上から順に進む。
+//    ・次の形態のきっかけ（いまは HP の割合）を満たしたら、攻撃をすぐに打ち切り、弾も消して移行演出へ
+//    ・移行演出の間は無敵。演出の途中で見た目（モデル・色・大きさ）が切り替わる
+//    ・HP は1本。次の形態の閾値を超えた分のダメージは持ち越さない
+//
+//  HP とコア：TakeDamage に攻撃してきた位置を渡す。背中のコアの向きからのときだけ HP が減る
+//
+//  数値はすべて Resources/Boss.json（ImGui で調整して Save）。形態・パターンの組み立ても JSON で行う
 // =============================================================================
 class Boss {
 
@@ -30,6 +44,27 @@ public:
 
 	// 攻撃が自機に当たったときに呼ばれる（引数はダメージ）。シールド軽減は受け取る側で行う
 	using HitCallback = std::function<void(float damage)>;
+	// 形態が変わったとき（移行演出の始まり）に呼ばれる（引数は形態の番号と名前）
+	using PhaseChangedCallback = std::function<void(int phaseIndex, const std::string& phaseName)>;
+	// 撃破されたときに呼ばれる
+	using DefeatedCallback = std::function<void()>;
+	// 攻撃（パターン）を始めたときに呼ばれる（引数はパターン名。チュートリアルの指示表示などに使う）
+	using AttackStartedCallback = std::function<void(const std::string& patternName)>;
+
+	// ボスの状態
+	enum class State {
+		Idle,       // 待機（次の攻撃の前に自機の方を向く）
+		Acting,     // 攻撃中（予兆・攻撃・硬直）
+		Transition, // 形態の移行演出中（無敵）
+		Defeated,   // 撃破
+	};
+
+	// TakeDamage の結果
+	enum class DamageResult {
+		Hit,     // コアに当たった（HP が減った）
+		Blocked, // コア以外の向きから当たったので弾いた
+		Ignored, // 無敵中・撃破後などで受け付けなかった
+	};
 
 public:
 
@@ -37,17 +72,20 @@ public:
 
 	~Boss();
 
-	//オブジェクト・ステートの生成、ステート関連変数の初期化を行う
+	// オブジェクト・攻撃の生成、Resources/Boss.json の読み込み、戦闘の初期化を行う
 	void Initialize(TuboEngine::Camera* camera, const TuboEngine::Math::Vector3& center);
 
-	//オブジェクト・ステートの更新
+	// 行動サイクル・形態の更新
 	void Update(float deltaTime);
 
-	//オブジェクトの描画
+	// オブジェクトの描画
 	void Draw();
 
-	//行動サイクルの表示、各ステートのパラメータ調節
+	// 状態の表示、各種パラメータの調整、JSON の保存
 	void DrawImGui();
+
+	// 戦闘をはじめからやり直す（HP 満タン・最初の形態）
+	void Restart();
 
 	// ---- シーンから渡す情報 ----
 
@@ -57,29 +95,59 @@ public:
 		targetRadius_ = radius;
 	}
 
-	//接触時の処理を設定
+	// 攻撃が自機に当たったときの処理を設定
 	void SetHitCallback(HitCallback callback) { onHit_ = std::move(callback); }
+	// 形態が変わったときの処理を設定
+	void SetPhaseChangedCallback(PhaseChangedCallback callback) { onPhaseChanged_ = std::move(callback); }
+	// 撃破されたときの処理を設定
+	void SetDefeatedCallback(DefeatedCallback callback) { onDefeated_ = std::move(callback); }
+	// 攻撃を始めたときの処理を設定
+	void SetAttackStartedCallback(AttackStartedCallback callback) { onAttackStarted_ = std::move(callback); }
 
-	//ステージの広さを設定
+	// ステージの広さを設定
 	void SetStageRadius(float radius) { stageRadius_ = radius; }
 
 	// チュートリアル時の速度倍率（1 未満でゆっくり）
 	void SetSpeedScale(float scale) { speedScale_ = scale; }
 
+	// ---- 外からの指示（チュートリアルなど） ----
+
+	// 次に出す攻撃（パターン名）を予約する。予約は抽選より優先し、予約順に出す
+	void RequestPattern(const std::string& patternName) { requestedPatterns_.push_back(patternName); }
+	// false にすると自分では攻撃を選ばず、予約されたときだけ攻撃する
+	void SetAutoAttack(bool enabled) { autoAttack_ = enabled; }
+
+	// ---- ダメージ ----
+
+	// 自機の攻撃が当たったときに呼ぶ。attackerPosition は攻撃してきた位置（コアの向きの判定に使う）
+	DamageResult TakeDamage(float damage, const TuboEngine::Math::Vector3& attackerPosition);
+
+	// その位置からボスを攻撃したらコアに当たるか（背中の方向から左右にコアの角度幅の半分ずつ）
+	bool IsInCoreArc(const TuboEngine::Math::Vector3& position) const;
+
 	// ---- 攻撃ステートから使う操作 ----
+	// ※ 同時攻撃の従が呼んだときは何もしない（ボスを動かすのは主だけ。SetBodyControlEnabled で切り替わる）
 
 	// 予備動作によるY軸の移動などで使用
-	void SetHeight(float height) { height_ = height; } 
+	void SetHeight(float height) {
+		if (bodyControlEnabled_) {
+			height_ = height;
+		}
+	}
 	float GetHeight() const { return height_; }
 
-	//攻撃時の警告色への設定などで使用
-	void SetColor(const TuboEngine::Math::Vector4& color) { color_ = color; }
+	// 攻撃時の警告色への設定などで使用（形態の色に掛け合わせて表示する）
+	void SetColor(const TuboEngine::Math::Vector4& color) {
+		if (bodyControlEnabled_) {
+			color_ = color;
+		}
+	}
 
 	// ボスの向きを「ボスの周りの角度」で設定する（X軸 +方向が 0、Z軸 +方向が π/2）
 	void SetFacingAngle(float angle);
 	float GetFacingAngle() const;
 
-	// 自機の方へ向きを変える。旋回速度の上限より速くは回らない
+	// 自機の方へ向きを変える。旋回速度の上限（形態ごと）より速くは回らない
 	void TurnTowardTarget(float deltaTime);
 
 	void NotifyHitTarget(float damage) {
@@ -87,6 +155,10 @@ public:
 			onHit_(damage);
 		}
 	}
+
+	// 攻撃がボスを動かしてよいか（BossAttackState が攻撃の処理の間だけ切り替える）
+	void SetBodyControlEnabled(bool enabled) { bodyControlEnabled_ = enabled; }
+	bool IsBodyControlEnabled() const { return bodyControlEnabled_; }
 
 	// ---- 取得 ----
 
@@ -102,16 +174,76 @@ public:
 
 	TuboEngine::Object3d* GetObject3d() const { return object_.get(); }
 
+	State GetState() const { return state_; }
+
+	float GetHp() const { return hp_; }
+
+	float GetMaxHp() const { return data_.common.maxHp; }
+
+	float GetHpRatio() const { return data_.common.maxHp > 0.0f ? hp_ / data_.common.maxHp : 0.0f; }
+
+	bool IsInvincible() const { return state_ == State::Transition || state_ == State::Defeated; }
+
+	bool IsDefeated() const { return state_ == State::Defeated; }
+
+	int GetPhaseIndex() const { return phaseIndex_; }
+
+	const BossPhaseData& GetPhase() const { return data_.phases[phaseIndex_]; }
+
+	// ---- データ（Resources/Boss.json） ----
+
+	// 読み込んで戦闘をはじめからやり直す。ファイルが無ければコードの初期値を使う
+	bool LoadData();
+	// いまの数値を "current" として保存する（"default" は残す）
+	bool SaveData();
+	// "default" の数値に戻して保存する
+	bool ResetDataToDefault();
+
 private:
 
-	// 次の攻撃ステートの選出。現状は初期化時の登録順を繰り返す。
-	void SelectNextAttack();
+	// ---- 行動サイクル ----
+	void UpdateIdle(float deltaTime);
+	void UpdateActing(float deltaTime);
+	void UpdateTransition(float deltaTime);
+	void UpdateDefeated(float deltaTime);
 
-	// 攻撃ステートの切り替え。
-	void ChangeAttack(BossAttackState* next);
+	// 次の攻撃を選ぶ（予約 → デバッグ固定 → 形態の重み付きランダム）。出せるものが無ければ nullptr
+	BossAttackPattern* SelectNextPattern();
+	// 形態の候補から重み付きランダムで選ぶ（再使用までの回数も考える）
+	BossAttackPattern* SelectFromPhase();
+	void StartPattern(BossAttackPattern* pattern);
+	void CancelPattern();
+	void EnterIdle(float waitTime);
 
-	//座標・回転・色の適用
+	// ---- 形態 ----
+	void CheckPhaseTriggers();
+	bool IsTriggerSatisfied(const BossPhaseTrigger& trigger) const;
+	void StartTransition(int nextPhase);
+	void Defeat();
+	// 次の形態に入る HP（これより下には一度に削れない）。HP がきっかけでなければ 0
+	float GetNextPhaseHpFloor() const;
+	// 形態の数値（旋回の速さ・抽選の再使用回数）を反映
+	void ResetPhaseRuntime();
+	void ApplyLook(const BossLookData& look);
+
+	// ---- データ ----
+	BossAttackState* FindAttack(const std::string& id) const;
+	BossAttackPattern* FindPattern(const std::string& name) const;
+	// 攻撃を作り直し、JSON の数値を反映する
+	void ApplyJson(const TuboEngine::JsonManager::Json& json);
+	TuboEngine::JsonManager::Json BuildJson() const;
+	// JSON の patterns と攻撃の一覧から、抽選に使うパターンを作る
+	void RebuildPatterns();
+	// 形態が1つも無いときは、すべての攻撃を使う形態を1つ作る
+	void EnsurePhases();
+
+	// 座標・回転・色の適用
 	void ApplyObjectTransform();
+	// コアの向き（狙える範囲）をラインで描く
+	void DrawCoreLines() const;
+	// ImGui の各部分
+	void DrawImGuiStatus();
+	void DrawImGuiData();
 
 private:
 
@@ -120,49 +252,81 @@ private:
 
 	TuboEngine::Math::Vector3 center_ = {0.0f, 0.0f, 0.0f};      // ステージ中央（ボスの基準位置）
 
-	float baseHeight_ = 1.0f;                                    // 通常時の高さ（ブロックが地面に乗る高さ）
+	float baseHeight_ = 1.0f;                                    // 大きさ1のときの通常の高さ（ブロックが地面に乗る高さ）
 
 	float height_ = 0.0f;                                        // 基準からの上昇量
 
 	float yaw_ = 0.0f;                                           // 向き（Object3d の Y 回転）
 
-	TuboEngine::Math::Vector4 color_ = {1.0f, 1.0f, 1.0f, 1.0f}; // 色
+	TuboEngine::Math::Vector4 color_ = {1.0f, 1.0f, 1.0f, 1.0f}; // 攻撃の演出の色
 
-	// 攻撃の一覧（この順にくり返す）
-	std::vector<BossAttackState*> attacks_;
+	BossLookData look_;                                          // いま表示している形態の見た目
 
-	//現在の攻撃ステート
-	BossAttackState* currentAttack_ = nullptr;
+	std::string appliedModel_;                                   // いま使っているモデル
 
-	// 攻撃ステート（各攻撃は使い回し、Enter で初期化する）
-	std::unique_ptr<BossAttackOmniBomb> omniBomb_;
+	bool bodyControlEnabled_ = true;
 
-	std::unique_ptr<BossAttackLockOnBeam> lockOnBeam_;
+	// ---- データ ----
+	BossData data_;
 
-	std::unique_ptr<BossAttackBarrage> barrage_;
+	TuboEngine::JsonManager::Json defaultJson_; // "default" の中身
 
-	std::unique_ptr<BossAttackSweep> sweep_;
+	// ---- 攻撃 ----
+	std::vector<std::unique_ptr<BossAttackState>> attacks_;      // 攻撃の種類ごとに1つ
 
-	//攻撃ステートの予約番号
-	size_t nextAttackIndex_ = 0;
+	std::vector<std::unique_ptr<BossAttackPattern>> patterns_;   // 抽選に使うパターン（単発＋JSON の定義）
 
-	// 自機の情報
+	BossAttackPattern* currentPattern_ = nullptr;
+
+	std::vector<int> cooldowns_;                                 // 形態の候補ごとの、再使用までの残り回数
+
+	std::deque<std::string> requestedPatterns_;                  // 外から予約された攻撃
+
+	bool autoAttack_ = true;
+
+	std::mt19937 random_{std::random_device{}()};
+
+	// ---- 状態 ----
+	State state_ = State::Idle;
+
+	float stateTimer_ = 0.0f;
+
+	float idleWait_ = 0.0f;                                      // 待機の最低時間
+
+	int phaseIndex_ = 0;
+
+	bool transitionLookApplied_ = false;                         // 移行演出で見た目を切り替えたか
+
+	float hp_ = 0.0f;
+
+	// ---- 自機の情報 ----
 	TuboEngine::Math::Vector3 targetPosition_ = {0.0f, 0.0f, 0.0f};
 
 	float targetRadius_ = 0.5f;
 
+	// ---- コールバック ----
 	HitCallback onHit_;
+
+	PhaseChangedCallback onPhaseChanged_;
+
+	DefeatedCallback onDefeated_;
+
+	AttackStartedCallback onAttackStarted_;
 
 	float stageRadius_ = 20.0f;
 
 	float speedScale_ = 1.0f;
 
-	float turnSpeed_ = 1.2f; // 旋回速度（自機の方へ向きを変える速さの上限、ラジアン/秒）
-
-	// デバッグ
-	int deForcedAttackIndex_ = -1; //-1 以外ならその攻撃だけを出す
+	// ---- デバッグ ----
+	std::string deForcedPattern_;   // 空でなければその攻撃だけを出す
 
 	bool dePaused_ = false;
 
 	bool deDrawLines_ = true;
+
+	float deTestDamage_ = 200.0f;   // ImGui のダメージテストの量
+
+	std::string deLastDamage_;      // 直近のダメージテストの結果
+
+	std::string deDataMessage_;     // 直近の保存・読み込みの結果
 };

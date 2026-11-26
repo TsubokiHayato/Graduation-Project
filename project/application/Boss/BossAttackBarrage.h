@@ -29,8 +29,11 @@ public:
 public:
 	BossAttackBarrage();
 
+	const char* GetId() const override { return "Barrage"; }
 	const char* GetName() const override { return "弾幕射撃 (Barrage)"; }
 	void DrawLines(const Boss& boss) const override;
+	void SaveParams(TuboEngine::JsonManager::Json& json) const override;
+	void LoadParams(const TuboEngine::JsonManager::Json& json) override;
 
 	Params& GetParams() { return params_; }
 	int GetHitCount() const { return hitCount_; }
