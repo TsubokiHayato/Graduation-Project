@@ -679,16 +679,27 @@ void Boss::DrawImGuiStatus() {
 	ImGui::ProgressBar(ratio, ImVec2(-1.0f, 0.0f), hpText);
 	ImGui::PopStyleColor();
 	// 次の形態の閾値
-	if (const float floorHp = GetNextPhaseHpFloor(); floorHp > 0.0f) {
+	if (phaseIndex_ + 1 >= static_cast<int>(data_.phases.size())) {
+		ImGui::Text("次の形態まで : - (最後の形態)");
+	} else if (const float floorHp = GetNextPhaseHpFloor(); floorHp > 0.0f) {
 		ImGui::Text("次の形態まで : HP %.0f 以下", floorHp);
+	} else {
+		ImGui::Text("次の形態まで : - (HP 以外のきっかけ)");
 	}
 
+	// 攻撃していないときも同じ行数で表示する（行が消えると下の項目の位置がずれて触りにくいため）
+	const BossAttackState* attack = currentPattern_ ? currentPattern_->GetCurrentAttack() : nullptr;
 	if (currentPattern_) {
 		ImGui::Text("Pattern: %s (%s)", currentPattern_->GetName().c_str(), BossAttackPattern::TypeToString(currentPattern_->GetType()));
-		if (const BossAttackState* attack = currentPattern_->GetCurrentAttack()) {
-			ImGui::Text("Attack : %s", attack->GetName());
-			ImGui::Text("Step   : %s  %.2f", kStepNames[static_cast<int>(attack->GetStep())], attack->GetStepTimer());
-		}
+	} else {
+		ImGui::Text("Pattern: -");
+	}
+	if (attack) {
+		ImGui::Text("Attack : %s", attack->GetName());
+		ImGui::Text("Step   : %s  %.2f", kStepNames[static_cast<int>(attack->GetStep())], attack->GetStepTimer());
+	} else {
+		ImGui::Text("Attack : -");
+		ImGui::Text("Step   : -");
 	}
 
 	// ---- デバッグ ----
@@ -727,9 +738,7 @@ void Boss::DrawImGuiStatus() {
 	if (ImGui::Button("Hit from front")) {
 		testHit(0.0f, "正面から");
 	}
-	if (!deLastDamage_.empty()) {
-		ImGui::Text("%s", deLastDamage_.c_str());
-	}
+	ImGui::Text("結果 : %s", deLastDamage_.empty() ? "-" : deLastDamage_.c_str());
 	ImGui::Text("自機の位置 : %s", IsInCoreArc(targetPosition_) ? "コアを狙える" : "正面（弾かれる）");
 
 	// 出す攻撃を固定する（形態の抽選の代わり）
