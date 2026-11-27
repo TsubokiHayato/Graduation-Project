@@ -18,10 +18,8 @@ void Shield::Initialize(const ShieldData& data, TuboEngine::Camera* camera) {
     isediting_ = false;
     // 現在値を最大値以内に収める
     data_.shield = std::clamp(data_.shield, 0.0f, effectivemaxshield_);
-    // シールドオブジェクトの生成、初期化
-    object_ = std::make_unique<Object3d>();
-    object_->Initialize("block/block.obj");
-    object_->SetCamera(camera);
+    // シールドエフェクト（ハニカム球）の生成、初期化
+    effect_.Initialize(camera);
     // シールドオブジェクトの表示状態   
     data_.isvisible = false;
 }
@@ -39,25 +37,33 @@ void Shield::Update(const TuboEngine::Math::Vector3& playerPosition) {
 
     // =========================================
     // プレイヤーに追従
-	// プレイヤ―の位置 + オフセット
+	// プレイヤ―の中心（Player の座標はモデル中心）+ 微調整用オフセット
     // =========================================
     TuboEngine::Math::Vector3 position{
         playerPosition.x + data_.offset.x,
         playerPosition.y + data_.offset.y,
         playerPosition.z + data_.offset.z
     };
-    object_->SetPosition(position);
-    object_->Update();
+
+    // =========================================
+    // 数値を見た目に反映
+    // =========================================
+    ShieldEffect::State state;
+    state.position = position;
+    // 残量率（基準最大値に対して。出力率で最大値が下がった分もセルの減りとして見せる）
+    state.shieldRate = data_.maxshield > 0.0f ? data_.shield / data_.maxshield : 0.0f;
+    // 出力率（基準最大値に対して）
+    state.outputRate = data_.maxshield > 0.0f ? effectivemaxshield_ / data_.maxshield : 0.0f;
+    // 表示はシールド値がある限り常に（isvisible には左右されない）
+    effect_.Update(kDeltaTime, state);
 }
 
 // =========================================
 // Draw
 // =========================================
 void Shield::Draw() {
-	// シールドが表示される条件は、シールドオブジェクトが表示可能で、実際に表示中であり、シールド耐久値が0より大きいこと
-    if (data_.isvisible && data_.shield > 0.0f) {
-        object_->Draw();
-    }  
+	// シールド値がある間は常に描画（セル数・破壊演出は ShieldEffect 側で決まる）
+    effect_.Draw();
 }
 
 // =========================================
@@ -81,6 +87,12 @@ float Shield::TakeDamage(float damage) {
     data_.shield -= absorbedDamage;
     // 耐久値が残っていれば表示
     data_.isvisible = data_.shield > 0.0f;
+    // 見た目：残っていればフラッシュ、0 になったら破壊演出
+    if (data_.shield > 0.0f) {
+        effect_.NotifyHit();
+    } else {
+        effect_.NotifyBreak();
+    }
     // 吸収しきれなかったダメージを返す
     return damage - absorbedDamage;
 }
@@ -172,9 +184,17 @@ void Shield::DrawImGui() {
     bool oldIsVisible = data_.isvisible;
     bool editing = false;
 
-    // シールド耐久値設定    
-    ImGui::DragFloat("Max Shield", &data_.maxshield, 1.0f);
+    // 現在値（ドラッグ中はリチャージを止めるので、見た目の変化を確認しやすい）
+    float oldShield = data_.shield;
+    ImGui::SliderFloat("Current Shield", &data_.shield, 0.0f, effectivemaxshield_);
     editing = ImGui::IsItemActive();
+    if (data_.shield != oldShield) {
+        data_.isvisible = data_.shield > 0.0f;
+    }
+
+    // シールド耐久値設定
+    ImGui::DragFloat("Max Shield", &data_.maxshield, 1.0f);
+    editing |= ImGui::IsItemActive();
     ImGui::DragFloat("Recharge Delay", &data_.rechargetime, 0.1f);
     editing |= ImGui::IsItemActive();
     ImGui::DragFloat("Recharge Rate", &data_.rechargerate, 1.0f);
@@ -199,5 +219,7 @@ void Shield::DrawImGui() {
         oldOffset.y != data_.offset.y ||
         oldOffset.z != data_.offset.z;
 
+    // 見た目の調整（ここは isediting_ に含めない＝リチャージを止めない）
+    effect_.DrawImGui();
 #endif
 }

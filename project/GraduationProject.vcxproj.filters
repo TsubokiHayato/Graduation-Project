@@ -126,6 +126,9 @@
     <ClCompile Include="application\scene\Player\Equipment\Shield.cpp">
       <Filter>application\scene\Player\Equipment</Filter>
     </ClCompile>
+    <ClCompile Include="application\scene\Player\Equipment\ShieldEffect.cpp">
+      <Filter>application\scene\Player\Equipment</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FadeScreen.h" />
@@ -221,6 +224,9 @@
       <Filter>application\scene\Player\Equipment</Filter>
     </ClInclude>
     <ClInclude Include="application\scene\Player\Equipment\Shield.h">
+      <Filter>application\scene\Player\Equipment</Filter>
+    </ClInclude>
+    <ClInclude Include="application\scene\Player\Equipment\ShieldEffect.h">
       <Filter>application\scene\Player\Equipment</Filter>
     </ClInclude>
   </ItemGroup>

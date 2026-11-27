@@ -127,6 +127,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="application\scene\Player\Equipment\EquipmentDataJson.cpp" />
     <ClCompile Include="application\scene\Player\Equipment\EquipmentManager.cpp" />
     <ClCompile Include="application\scene\Player\Equipment\Shield.cpp" />
+    <ClCompile Include="application\scene\Player\Equipment\ShieldEffect.cpp" />
     <ClCompile Include="application\scene\Player\Player.cpp" />
     <ClCompile Include="application\scene\Player\BoosterParticlePSO.cpp" />
     <ClCompile Include="application\scene\Player\BoosterParticleEmitter.cpp" />
@@ -167,6 +168,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="application\scene\Player\Equipment\EquipmentDataJson.h" />
     <ClInclude Include="application\scene\Player\Equipment\EquipmentManager.h" />
     <ClInclude Include="application\scene\Player\Equipment\Shield.h" />
+    <ClInclude Include="application\scene\Player\Equipment\ShieldEffect.h" />
     <ClInclude Include="application\scene\Player\Player.h" />
     <ClInclude Include="application\scene\Player\BoosterParticlePSO.h" />
     <ClInclude Include="application\scene\Player\BoosterParticleEmitter.h" />

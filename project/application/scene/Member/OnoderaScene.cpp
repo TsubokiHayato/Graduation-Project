@@ -68,8 +68,7 @@ void OnoderaScene::ParticleDraw() {}
 void OnoderaScene::ImGuiDraw() {
 #ifdef USE_IMGUI
 	player_->DrawImGui();
-	//シールドオブジェクトの設定
-	EquipmentManager::GetInstance()->GetShield()->GetShieldObject()->DrawImGui("Shield Object");
+	// シールドの見た目の設定は Equipment ウィンドウ（Shield Effect）にある
 
 	if (ImGui::Begin("Equipment")) {
 		EquipmentManager::GetInstance()->DrawImGui();
