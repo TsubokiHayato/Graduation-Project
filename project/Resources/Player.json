@@ -3,7 +3,7 @@
     "energy": {
       "beam": 0.0,
       "booster": 50.0,
-      "fight": 0.0,
+      "fight": 10.0,
       "maxenergy": 100.0,
       "shield": 25.0
     },

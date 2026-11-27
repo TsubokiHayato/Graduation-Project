@@ -124,6 +124,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="application\Boss\BossAttackOmniBomb.cpp" />
     <ClCompile Include="application\Boss\BossAttackState.cpp" />
     <ClCompile Include="application\Boss\BossAttackSweep.cpp" />
+    <ClCompile Include="application\scene\Player\Equipment\AttackMelee.cpp" />
     <ClCompile Include="application\scene\Player\Equipment\EquipmentDataJson.cpp" />
     <ClCompile Include="application\scene\Player\Equipment\EquipmentManager.cpp" />
     <ClCompile Include="application\scene\Player\Equipment\Shield.cpp" />
@@ -158,6 +159,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="application\Boss\BossAttackOmniBomb.h" />
     <ClInclude Include="application\Boss\BossAttackState.h" />
     <ClInclude Include="application\Boss\BossAttackSweep.h" />
+    <ClInclude Include="application\scene\Player\Equipment\AttackMelee.h" />
     <ClInclude Include="application\scene\Player\Equipment\EquipmentData.h" />
     <ClInclude Include="application\scene\Player\Equipment\EquipmentDataJson.h" />
     <ClInclude Include="application\scene\Player\Equipment\EquipmentManager.h" />
