@@ -94,6 +94,7 @@
     <ClCompile Include="application\scene\BossEdit\BossEditScene.cpp" />
     <ClCompile Include="application\scene\BossEdit\BossTimelineEditor.cpp" />
     <ClCompile Include="application\scene\BossEdit\BossLookEditor.cpp" />
+    <ClCompile Include="application\scene\Tutorial\TutorialScene.cpp" />
     <ClCompile Include="BossHitDebugDraw.cpp" />
     <ClCompile Include="BossHitShapes.cpp" />
     <ClCompile Include="BossWarning.cpp" />
@@ -172,6 +173,7 @@
     <ClInclude Include="application\scene\BossEdit\BossEditScene.h" />
     <ClInclude Include="application\scene\BossEdit\BossTimelineEditor.h" />
     <ClInclude Include="application\scene\BossEdit\BossLookEditor.h" />
+    <ClInclude Include="application\scene\Tutorial\TutorialScene.h" />
     <ClInclude Include="BossWarning.h" />
     <ClInclude Include="BossWarningRenderer.h" />
   </ItemGroup>

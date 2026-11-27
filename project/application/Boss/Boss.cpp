@@ -529,6 +529,7 @@ void Boss::ForcePhase(int phaseIndex) {
 		return;
 	}
 	CancelPattern();
+	requestedPatterns_.clear(); // 予約していた攻撃も取り消す（切り替えた直後に攻撃しないように）
 	phaseIndex_ = phaseIndex;
 	height_ = 0.0f;
 	color_ = kColorNormal;

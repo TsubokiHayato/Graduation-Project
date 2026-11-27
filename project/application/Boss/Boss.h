@@ -242,7 +242,7 @@ public:
 	// プレビュー中のパターンの経過時間
 	float GetPreviewTime() const;
 
-	// 見た目の確認用：その形態にすぐ切り替える（移行演出なし。攻撃は打ち切る）
+	// その形態にすぐ切り替える（移行演出なし。攻撃は打ち切り、予約していた攻撃も取り消す）
 	void ForcePhase(int phaseIndex);
 	// 見た目の確認用：ひとつ前の形態から、その形態への移行演出を再生する（合図も出す）
 	void PlayTransitionPreview(int phaseIndex);
