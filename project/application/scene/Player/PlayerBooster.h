@@ -79,7 +79,11 @@ private:
     // 現在の状態
     // =========================================
     float yaw_ = 0.0f;        // ユニット全体の向き（移動方向, Y軸回転）
+    bool hasFaceTarget_ = false;              // 相手の方を向き続けるか（ロックオン中）
+    TuboEngine::Math::Vector3 faceTarget_{};  // 向く相手の位置
     float tilt_ = 0.0f;       // ノズルの傾き（X軸回転）
+    float sideYaw_ = 0.0f;    // ノズルの左右の振り（ロックオン中の横移動で、移動方向へ向ける）
+    float outputScale_ = 1.0f;// ブースター出力による噴射の大きさ倍率
     bool isMoving_ = false;   // 移動中か
     bool isDashing_ = false;  // ダッシュ中か
     float output_ = 0.0f;     // ブースター出力率（0～1）
@@ -103,13 +107,17 @@ private:
     float boostTiltBonus_ = 0.25f;  // ブースター出力最大時に追加で倒す量(rad)
     float yawFollow_ = 0.2f;        // 移動方向への追従速度(0～1)
     float tiltFollow_ = 0.15f;      // 傾きの追従速度(0～1)
+    float sideYawMax_ = 1.2f;       // ロックオン中の横移動でノズルを振る最大角(rad)
+    float sideFollow_ = 0.2f;       // 左右の振りの追従速度(0～1)
     float moveThreshold_ = 0.0001f; // これ以上動いたら「移動中」とみなす距離
 
     // スロットル（状態ごとの目標値）
     float idleThrottle_ = 0.18f;    // 停止中（アイドリング）
     float moveThrottle_ = 0.6f;     // 移動中
     float dashThrottle_ = 1.3f;     // ダッシュ中（オーバーブースト）
-    float minOutputGain_ = 0.15f;   // 出力0%でも残る噴射の割合
+    float minOutputGain_ = 0.0f;    // 出力0%でも残る噴射の割合（0 = 出力0%で噴射しない）
+    float outputSizeMin_ = 0.45f;   // 出力が低いときの噴射の大きさ倍率
+    float outputSizeMax_ = 1.5f;    // 出力最大時の噴射の大きさ倍率
     float outputOverride_ = -1.0f;  // 0以上なら出力をこの値で上書き（ImGuiでの確認用）
 
     // 噴射の見た目
@@ -145,6 +153,9 @@ public:
             if (e) { e->SetGround(true, height); }
         }
     }
+    // 向く相手を設定する（ロックオン中。移動方向ではなく相手の方を向き続ける）。毎フレーム Update の前に呼ぶ
+    void SetFaceTarget(const TuboEngine::Math::Vector3& target) { hasFaceTarget_ = true; faceTarget_ = target; }
+    void ClearFaceTarget() { hasFaceTarget_ = false; }
     // 現在の向き(Y軸回転)取得
     float GetYaw() const { return yaw_; }
     // 移動中か取得

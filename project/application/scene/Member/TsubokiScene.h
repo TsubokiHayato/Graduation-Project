@@ -7,6 +7,7 @@
 #include "AnimatorController.h"
 #include "Player/Player.h"
 #include "Player/PlayerBooster.h"
+#include "ui/Reticle.h"
 #include <memory>
 
 class TsubokiScene : public IScene {
@@ -54,4 +55,9 @@ private:
 
 	// プレイヤー背中のバーニアノズル（移動方向に合わせて回転する）
 	std::unique_ptr<PlayerBooster> booster_;
+	// 画面中央のレティクル（出力配分ゲージ付き）。試作中は 1〜4 / 0 キーで配分を切り替える
+	Reticle reticle_;
+	float lockOnAimHeight_ = 1.0f; // ロックオン時に狙う高さ（相手の足元からの距離, m）
+
+	// カメラ（キャラクターからの相対位置）
 };

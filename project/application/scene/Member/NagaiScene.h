@@ -2,7 +2,8 @@
 #include "IScene.h"
 #include "Camera.h"
 #include "Object3d.h"
-#include "../../Boss/Boss.h"
+#include "Boss/Boss.h"
+#include "Player/Player.h"
 #include <memory>
 
 // Nagai 個人用の作業シーン
@@ -26,6 +27,8 @@ private:
 	// ---- ボス ----
 	std::unique_ptr<Boss> boss_;
 	float stageRadius_ = 20.0f; // ステージ半径（仮）
+
+	std::unique_ptr<Player> player_;
 
 	// ---- 動作確認用の仮の自機（距離と角度で位置を持つ） ----
 	std::unique_ptr<TuboEngine::Object3d> dummyPlayer_;

@@ -1,6 +1,7 @@
 #pragma once
 #include "EquipmentData.h"
 #include "Object3d.h"
+#include "ShieldEffect.h"
 
 // =========================================
 // シールドクラス
@@ -31,8 +32,8 @@ public:
 private:
     // シールドデータ
     ShieldData data_{};
-    // シールドオブジェクト本体
-    std::unique_ptr<TuboEngine::Object3d> object_;
+    // シールドの見た目（ハニカム球）
+    ShieldEffect effect_;
     float effectivemaxshield_;      // ブースター適用後の最大シールド値
     // リチャージ関連
     float rechargetimer_;      // ダメージを受けてからの経過時間
@@ -42,8 +43,8 @@ private:
 public:
 	// シールドデータ取得
     ShieldData GetShieldData() const { return data_; }
-    // シールドオブジェクト取得
-    TuboEngine::Object3d* GetShieldObject() const { return object_.get(); }
+    // シールドエフェクト取得
+    ShieldEffect* GetEffect() { return &effect_; }
     // シールドが動作中かどうか
     bool IsBusy() const { return data_.shield < data_.maxshield || isrecharging_ || rechargetimer_ > 0.0f; }
     // ImGuiで設定編集中かどうか

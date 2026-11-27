@@ -52,6 +52,10 @@ void NagaiScene::Initialize() {
 		playerHp_ = (std::max)(playerHp_ - lastDamage_, 0.0f);
 	});
 
+	// プレイヤ―の生成、初期化処理
+	player_ = std::make_unique<Player>();
+	player_->Initialize(camera_.get());
+
 	// 動作確認用の仮の自機
 	dummyPlayer_ = std::make_unique<Object3d>();
 	dummyPlayer_->Initialize("sphere/sphere.obj");
@@ -93,6 +97,9 @@ void NagaiScene::Update() {
 	boss_->SetTarget(playerPos, playerRadius_);
 	boss_->Update(dt); // 攻撃範囲のラインもここで描かれる
 
+	// プレイヤ―更新処理
+	player_->Update();
+
 	// デバッグライン：ステージの縁
 	DrawStageCircle(stageRadius_, {0.6f, 0.6f, 0.6f, 1.0f});
 
@@ -110,6 +117,9 @@ void NagaiScene::Object3DDraw() {
 	axis_->Draw();
 	boss_->Draw();
 	dummyPlayer_->Draw();
+
+	// プレイヤ―描画処理
+	player_->Draw();
 }
 
 void NagaiScene::SpriteDraw() {

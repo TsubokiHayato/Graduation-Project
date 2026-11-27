@@ -104,11 +104,33 @@ void PlayerBooster::Update(float booster, bool isDashing) {
         ownerVelocity_ = delta / dt;
     }
 
-    if (isMoving_) {
+    if (hasFaceTarget_) {
+        // ロックオン中：移動方向に関係なく相手の方を向く（ゼルダの注目と同じ）
+        const float fx = faceTarget_.x - ownerPos.x;
+        const float fz = faceTarget_.z - ownerPos.z;
+        if (fx * fx + fz * fz > 0.0001f) {
+            yaw_ = LerpAngle(yaw_, std::atan2(fx, fz), yawFollow_);
+        }
+    } else if (isMoving_) {
         // +Z を 0 とした移動方向の角度
         const float targetYaw = std::atan2(delta.x, delta.z);
         yaw_ = LerpAngle(yaw_, targetYaw, yawFollow_);
     }
+
+    // ---------------------------------------------
+    // ロックオン中の横移動：体は相手を向いたまま、ノズルだけ移動方向へ振る
+    // （噴射口が移動と逆を向き、横に吹かしているように見せる）
+    // ---------------------------------------------
+    float targetSideYaw = 0.0f;
+    if (hasFaceTarget_ && isMoving_) {
+        const float s = std::sin(yaw_);
+        const float c = std::cos(yaw_);
+        const float localX = delta.x * c - delta.z * s;  // 右方向の成分
+        const float localZ = delta.x * s + delta.z * c;  // 前方向の成分
+        // 後ろへ下がる時も、左右成分だけで振る（180度反転させない）
+        targetSideYaw = std::clamp(std::atan2(localX, std::abs(localZ)), -sideYawMax_, sideYawMax_);
+    }
+    sideYaw_ += (targetSideYaw - sideYaw_) * sideFollow_;
 
     // ---------------------------------------------
     // 噴射の強さ = スロットル（状態）× ブースター出力
@@ -125,6 +147,8 @@ void PlayerBooster::Update(float booster, bool isDashing) {
         throttle_ = dashThrottle_;
     }
     power_ = throttle_ * (minOutputGain_ + (1.0f - minOutputGain_) * output_);
+    // 出力が高いほど噴射を大きく（数値の違いが見た目で分かるように）
+    outputScale_ = outputSizeMin_ + (outputSizeMax_ - outputSizeMin_) * output_;
 
     // ノズルの加熱（熱くなるのは速く、冷めるのはゆっくり）
     const float targetHeat = std::clamp(power_, 0.0f, 1.0f);
@@ -180,10 +204,15 @@ void PlayerBooster::UpdateNozzle(size_t index) {
     mount.y += offset.y;
     mount.z += -offset.x * s + offset.z * c;
 
-    // 回転 (tilt, yaw, 0) をかけた時の、モデルの +Y（底面→先端）方向
+    // ノズルの向き = 体の向き + 左右の振り
+    const float nozzleYaw = yaw_ + sideYaw_;
+    const float ns = std::sin(nozzleYaw);
+    const float nc = std::cos(nozzleYaw);
+
+    // 回転 (tilt, nozzleYaw, 0) をかけた時の、モデルの +Y（底面→先端）方向
     const float st = std::sin(tilt_);
     const float ct = std::cos(tilt_);
-    const Vector3 tipDir{ st * s, ct, st * c };
+    const Vector3 tipDir{ st * ns, ct, st * nc };
 
     // モデルの原点は底面なので、先端が取り付け点に来るよう先端方向と逆にずらす
     // → 先端を支点にしてノズルが首を振る
@@ -201,7 +230,7 @@ void PlayerBooster::UpdateNozzle(size_t index) {
     // 回転：X軸で先端を前方へ倒し、Y軸で向きに合わせる
     // → 先端が背中に付き、噴射口が後方（停止中は下）を向く
     nozzles_[index]->SetPosition(pos);
-    nozzles_[index]->SetRotation({ tilt_, yaw_, 0.0f });
+    nozzles_[index]->SetRotation({ tilt_, nozzleYaw, 0.0f });
     nozzles_[index]->SetScale(nozzleScale_);
 
     // 加熱に応じてノズルを赤熱させる
@@ -225,7 +254,7 @@ void PlayerBooster::EmitExhaust(size_t index, float dt) {
     const Vector3 mouth = mouthPos_[index];
     const Vector3 dir = exhaustDir_[index];
     const float radius = nozzleScale_.x;   // cone.obj の底面の半径は 1
-    const float s = effectScale_;
+    const float s = effectScale_ * outputScale_;
     const Vector3 baseVel = ownerVelocity_ * inheritVelocity_;
     const float jet = jetSpeedMin_ + (jetSpeedMax_ - jetSpeedMin_) * p;
 
@@ -385,7 +414,7 @@ void PlayerBooster::EmitBurst(size_t index) {
     const Vector3 mouth = mouthPos_[index];
     const Vector3 dir = exhaustDir_[index];
     const float radius = nozzleScale_.x;
-    const float s = effectScale_;
+    const float s = effectScale_ * outputScale_;
     const Vector3 baseVel = ownerVelocity_ * inheritVelocity_;
     const float jet = jetSpeedMax_;
     Vector3 u, w;
@@ -556,6 +585,8 @@ void PlayerBooster::DrawImGui() {
             ImGui::SliderFloat("Move", &moveThrottle_, 0.0f, 1.5f);
             ImGui::SliderFloat("Dash", &dashThrottle_, 0.0f, 1.5f);
             ImGui::SliderFloat("Min Output Gain", &minOutputGain_, 0.0f, 1.0f);
+            ImGui::SliderFloat("Output Size Min", &outputSizeMin_, 0.0f, 3.0f);
+            ImGui::SliderFloat("Output Size Max", &outputSizeMax_, 0.0f, 3.0f);
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("Exhaust")) {
@@ -593,6 +624,9 @@ void PlayerBooster::DrawImGui() {
             ImGui::SliderAngle("Boost Tilt Bonus", &boostTiltBonus_, 0.0f, 90.0f);
             ImGui::SliderFloat("Yaw Follow", &yawFollow_, 0.01f, 1.0f);
             ImGui::SliderFloat("Tilt Follow", &tiltFollow_, 0.01f, 1.0f);
+            ImGui::Text("Side Yaw: %.1f deg", sideYaw_ * 180.0f / kPi);
+            ImGui::SliderAngle("Side Angle Max", &sideYawMax_, 0.0f, 90.0f);
+            ImGui::SliderFloat("Side Follow", &sideFollow_, 0.01f, 1.0f);
             ImGui::TreePop();
         }
     }
