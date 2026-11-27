@@ -102,5 +102,22 @@ JsonManager::Json EquipmentDataJson::ToRoundedJson(const EquipmentData& data) {
         static_cast<float>(Round3(data.shield.offset.z))
     };
 
+    // =========================================
+    // 近距離攻撃データ
+    // =========================================
+    const AttackData& meleeAttack = data.melee.attack;
+    json["attack"]["melee"]["attack"]["damage"] = Round3(meleeAttack.damage);
+    json["attack"]["melee"]["attack"]["maxdamage"] = Round3(meleeAttack.maxdamage);
+    json["attack"]["melee"]["attack"]["attackinterval"] = Round3(meleeAttack.attackinterval);
+    json["attack"]["melee"]["attack"]["startupframes"] = meleeAttack.startupframes;
+    json["attack"]["melee"]["attack"]["activeframes"] = meleeAttack.activeframes;
+    json["attack"]["melee"]["attack"]["recoveryframes"] = meleeAttack.recoveryframes;
+    
+    json["attack"]["melee"]["offset"] = TuboEngine::Math::Vector3{
+    static_cast<float>(Round3(data.melee.offset.x)),
+    static_cast<float>(Round3(data.melee.offset.y)),
+    static_cast<float>(Round3(data.melee.offset.z))
+    };
+
     return json;
 }

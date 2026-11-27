@@ -59,12 +59,46 @@ private:
 TUBO_JSON_DEFINE(ShieldData, SHIELD_FIELDS)
 
 // =========================================
+// 攻撃共通データのJSON変換
+// =========================================
+#define ATTACK_FIELDS(X)             \
+    X("damage", damage)              \
+    X("maxdamage", maxdamage)        \
+    X("attackinterval", attackinterval) \
+    X("startupframes", startupframes)   \
+    X("activeframes", activeframes)     \
+    X("recoveryframes", recoveryframes)
+
+TUBO_JSON_DEFINE(AttackData, ATTACK_FIELDS)
+
+// =========================================
+// 近距離攻撃データのJSON変換
+// =========================================
+#define MELEE_ATTACK_FIELDS(X) \
+    X("attack", attack)        \
+    X("offset", offset)
+
+TUBO_JSON_DEFINE(MeleeAttackData, MELEE_ATTACK_FIELDS)
+
+// =========================================
 // 装備データのJSON変換
 // =========================================
-#define EQUIPMENT_DATA_FIELDS(X) \
-    X("shield", shield)
+inline void to_json(nlohmann::json& j, const EquipmentData& value) {
+    j = nlohmann::json::object();
 
-TUBO_JSON_DEFINE(EquipmentData, EQUIPMENT_DATA_FIELDS)
+    j["shield"] = value.shield;
+    j["attack"]["melee"] = value.melee;
+}
+
+inline void from_json(const nlohmann::json& j, EquipmentData& value) {
+    TuboEngine::JsonManager::Read(j, "shield", value.shield);
+
+    if (j.contains("attack")) {
+        TuboEngine::JsonManager::Read(
+            j["attack"], "melee", value.melee
+        );
+    }
+}
 
 // =========================================
 // JSON全体の変換
