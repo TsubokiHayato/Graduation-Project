@@ -28,11 +28,6 @@ float WrapAngle(float a) {
 }
 
 const Math::Vector4 kColorNormal = {1.0f, 1.0f, 1.0f, 1.0f};
-const Math::Vector4 kColorWindUp = {1.0f, 0.4f, 0.2f, 1.0f};  // 振りかぶり
-const Math::Vector4 kColorSwing = {1.0f, 1.0f, 0.8f, 1.0f};   // 振り抜き
-const Math::Vector4 kColorStun = {0.4f, 0.4f, 0.5f, 1.0f};    // 硬直中
-const Math::Vector4 kColorWarning = {1.0f, 0.1f, 0.1f, 1.0f}; // 赤い警告表示
-const Math::Vector4 kColorArm = {1.0f, 0.8f, 0.3f, 1.0f};     // 腕
 } // namespace
 
 // 固有パラメータの JSON 変換（Resources/Boss.json の "attacks" → "Sweep" → "params"）
@@ -40,7 +35,13 @@ const Math::Vector4 kColorArm = {1.0f, 0.8f, 0.3f, 1.0f};     // 腕
 	X("radius", radius)	\
 	X("angleDeg", angleDeg)	\
 	X("swingTime", swingTime)	\
-	X("windUpDeg", windUpDeg)
+	X("windUpDeg", windUpDeg)	\
+	X("windUpColor", windUpColor)	\
+	X("swingColor", swingColor)	\
+	X("stunColor", stunColor)	\
+	X("warningColor", warningColor)	\
+	X("armColor", armColor)	\
+	X("countdownColor", countdownColor)
 TUBO_JSON_DEFINE(BossAttackSweep::Params, SWEEP_PARAM_FIELDS)
 
 void BossAttackSweep::SaveParams(JsonManager::Json& json) const {
@@ -97,7 +98,7 @@ void BossAttackSweep::UpdateTelegraph(Boss& boss, float t) {
 
 	// 振りかぶりで少し沈み、色が変わる
 	boss.SetHeight(-0.3f * Easing::OutCubic(t));
-	boss.SetColor(LerpColor(kColorNormal, kColorWindUp, Easing::OutCubic(t)));
+	boss.SetColor(LerpColor(kColorNormal, params_.windUpColor, Easing::OutCubic(t)));
 }
 
 // -----------------------------------------------------------------------------
@@ -105,7 +106,7 @@ void BossAttackSweep::UpdateTelegraph(Boss& boss, float t) {
 // -----------------------------------------------------------------------------
 void BossAttackSweep::UpdateAttack(Boss& boss, float t) {
 	boss.SetHeight(-0.3f + 0.5f * Easing::OutCubic(t));
-	boss.SetColor(LerpColor(kColorSwing, kColorWindUp, t));
+	boss.SetColor(LerpColor(params_.swingColor, params_.windUpColor, t));
 
 	if (!hasHit_ && IsHit(boss)) {
 		hasHit_ = true;
@@ -121,7 +122,7 @@ void BossAttackSweep::UpdateRecovery(Boss& boss, float t) {
 	const float landT = std::clamp(t / 0.3f, 0.0f, 1.0f);
 	boss.SetHeight(0.2f * (1.0f - Easing::OutBounce(landT)));
 	const float recoverT = std::clamp((t - 0.7f) / 0.3f, 0.0f, 1.0f);
-	boss.SetColor(LerpColor(kColorStun, kColorNormal, recoverT));
+	boss.SetColor(LerpColor(params_.stunColor, kColorNormal, recoverT));
 }
 
 void BossAttackSweep::OnExit(Boss& boss) {
@@ -169,6 +170,8 @@ void BossAttackSweep::DrawFan(const Boss& boss, float facing, float radius, cons
 }
 
 void BossAttackSweep::DrawLines(const Boss& boss) const {
+	// 線の色には形態の effectTint を掛け合わせる
+	auto fx = [&boss](const Math::Vector4& color) { return boss.TintEffect(color); };
 	const Math::Vector3& c = boss.GetCenter();
 	const float facing = boss.GetFacingAngle();
 	LineManager* lm = LineManager::GetInstance();
@@ -178,11 +181,11 @@ void BossAttackSweep::DrawLines(const Boss& boss) const {
 		const float t = StepProgress(GetTelegraphDuration());
 		// 扇形（＝実際の判定範囲）を赤く点滅表示。ボスの旋回に合わせて動く
 		const float blink = 0.5f + 0.5f * std::sin(2.0f * kPi * (3.0f + 7.0f * t) * GetStepTimer());
-		Math::Vector4 warn = kColorWarning;
+		Math::Vector4 warn = fx(params_.warningColor);
 		warn.w = 0.5f + 0.5f * blink;
 		DrawFan(boss, facing, params_.radius, warn);
 		// 中心から外へ広がる弧で攻撃までの残り時間を示す
-		DrawFan(boss, facing, params_.radius * t, {1.0f, 0.4f, 0.1f, 1.0f});
+		DrawFan(boss, facing, params_.radius * t, fx(params_.countdownColor));
 		break;
 	}
 	case Step::Attack: {
@@ -192,7 +195,7 @@ void BossAttackSweep::DrawLines(const Boss& boss) const {
 		const float from = (std::min)(half, (std::max)(arm, -half));
 		for (float a = half; a >= from; a -= 4.0f * kDegToRad) {
 			const float wa = facing + a;
-			lm->DrawLine({c.x, c.y + 0.05f, c.z}, {c.x + std::cos(wa) * params_.radius, c.y + 0.05f, c.z + std::sin(wa) * params_.radius}, kColorSwing);
+			lm->DrawLine({c.x, c.y + 0.05f, c.z}, {c.x + std::cos(wa) * params_.radius, c.y + 0.05f, c.z + std::sin(wa) * params_.radius}, fx(params_.swingColor));
 		}
 		break;
 	}
@@ -209,7 +212,7 @@ void BossAttackSweep::DrawLines(const Boss& boss) const {
 		const float r1 = params_.radius;
 		for (int i = 0; i < 3; ++i) {
 			const float h = kArmHeight + 0.15f * static_cast<float>(i);
-			lm->DrawLine({c.x + dx * r0, c.y + h, c.z + dz * r0}, {c.x + dx * r1, c.y + h, c.z + dz * r1}, kColorArm);
+			lm->DrawLine({c.x + dx * r0, c.y + h, c.z + dz * r0}, {c.x + dx * r1, c.y + h, c.z + dz * r1}, fx(params_.armColor));
 		}
 	}
 }
@@ -224,5 +227,14 @@ void BossAttackSweep::DrawImGuiParams() {
 	ImGui::DragFloat("Swing time", &params_.swingTime, 0.01f, 0.05f, 3.0f);
 	ImGui::DragFloat("Wind-up (deg)", &params_.windUpDeg, 1.0f, 0.0f, 180.0f);
 	ImGui::Text("Last hit : %s", lastHitResult_ ? "HIT" : "-");
+	if (ImGui::TreeNode("Colors (演出の色)")) {
+		ImGui::ColorEdit4("windUpColor", &params_.windUpColor.x);
+		ImGui::ColorEdit4("swingColor", &params_.swingColor.x);
+		ImGui::ColorEdit4("stunColor", &params_.stunColor.x);
+		ImGui::ColorEdit4("warningColor", &params_.warningColor.x);
+		ImGui::ColorEdit4("armColor", &params_.armColor.x);
+		ImGui::ColorEdit4("countdownColor", &params_.countdownColor.x);
+		ImGui::TreePop();
+	}
 #endif
 }

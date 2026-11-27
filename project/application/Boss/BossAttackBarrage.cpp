@@ -24,15 +24,10 @@ namespace {
 
 	const Math::Vector4 kColorNormal  = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-	const Math::Vector4 kColorDeploy  = { 1.0f, 0.85f, 0.3f, 1.0f }; // 砲門展開中
 
-	const Math::Vector4 kColorStun    = { 0.5f, 0.5f, 0.6f, 1.0f };  // 硬直中
 
-	const Math::Vector4 kColorPort    = { 1.0f, 0.8f, 0.2f, 1.0f };  // 砲門
 
-	const Math::Vector4 kColorWarning = { 1.0f, 0.1f, 0.1f, 1.0f };  // 赤い警告表示
 
-	const Math::Vector4 kColorBullet  = { 1.0f, 0.3f, 0.8f, 1.0f };  // 弾
 
 } // namespace
 
@@ -44,7 +39,12 @@ namespace {
 	X("volleyCount", volleyCount)	\
 	X("volleyInterval", volleyInterval)	\
 	X("volleyAngleShift", volleyAngleShift)	\
-	X("portLength", portLength)
+	X("portLength", portLength)	\
+	X("deployColor", deployColor)	\
+	X("stunColor", stunColor)	\
+	X("portColor", portColor)	\
+	X("warningColor", warningColor)	\
+	X("bulletColor", bulletColor)
 TUBO_JSON_DEFINE(BossAttackBarrage::Params, BARRAGE_PARAM_FIELDS)
 
 void BossAttackBarrage::SaveParams(JsonManager::Json& json) const {
@@ -115,7 +115,7 @@ void BossAttackBarrage::UpdateTelegraph(Boss& boss, float t) {
 	// 砲門が開くのに合わせて少し沈み込み、色が変わる
 	boss.SetHeight(-0.2f * Easing::OutCubic(t));
 
-	boss.SetColor(LerpColor(kColorNormal, kColorDeploy, Easing::OutCubic(t)));
+	boss.SetColor(LerpColor(kColorNormal, params_.deployColor, Easing::OutCubic(t)));
 }
 
 // -----------------------------------------------------------------------------
@@ -141,7 +141,7 @@ void BossAttackBarrage::UpdateAttack(Boss& boss, float t) {
 
 	boss.SetHeight(-0.2f + 0.3f * kick);
 
-	boss.SetColor(LerpColor(kColorDeploy, kColorNormal, kick));
+	boss.SetColor(LerpColor(params_.deployColor, kColorNormal, kick));
 
 	UpdateBullets(boss);
 }
@@ -155,7 +155,7 @@ void BossAttackBarrage::UpdateRecovery(Boss& boss, float t) {
 
 	const float recoverT = std::clamp((t - 0.5f) / 0.5f, 0.0f, 1.0f);
 
-	boss.SetColor(LerpColor(kColorStun, kColorNormal, recoverT));
+	boss.SetColor(LerpColor(params_.stunColor, kColorNormal, recoverT));
 
 	UpdateBullets(boss);
 }
@@ -245,6 +245,8 @@ void BossAttackBarrage::UpdateBullets(Boss& boss) {
 //  ライン描画：砲門・弾道の警告・弾
 // -----------------------------------------------------------------------------
 void BossAttackBarrage::DrawLines(const Boss& boss) const {
+	// 線の色には形態の effectTint を掛け合わせる
+	auto fx = [&boss](const Math::Vector4& color) { return boss.TintEffect(color); };
 
 	LineManager* lm = LineManager::GetInstance();
 
@@ -262,7 +264,7 @@ void BossAttackBarrage::DrawLines(const Boss& boss) const {
 
 		const float blink = 0.5f + 0.5f * std::sin(2.0f * kPi * (2.0f + 6.0f * t) * GetStepTimer());
 
-		Math::Vector4 warn = kColorWarning;
+		Math::Vector4 warn = fx(params_.warningColor);
 
 		warn.w = 0.4f + 0.6f * blink;
 
@@ -279,7 +281,7 @@ void BossAttackBarrage::DrawLines(const Boss& boss) const {
 
 			const float r1 = r0 + params_.portLength * open;
 
-			lm->DrawLine({ c.x + dx * r0, c.y + kBulletHeight, c.z + dz * r0 }, { c.x + dx * r1, c.y + kBulletHeight, c.z + dz * r1 }, kColorPort);
+			lm->DrawLine({ c.x + dx * r0, c.y + kBulletHeight, c.z + dz * r0 }, { c.x + dx * r1, c.y + kBulletHeight, c.z + dz * r1 }, fx(params_.portColor));
 
 			// 最初の一斉射の弾道を赤く警告表示（中心から端へ伸びていく）
 			const float len = stageRadius_ * Easing::OutCubic(t);
@@ -305,14 +307,14 @@ void BossAttackBarrage::DrawLines(const Boss& boss) const {
 
 			const float r1 = r0 + params_.portLength;
 
-			lm->DrawLine({ c.x + dx * r0, c.y + kBulletHeight, c.z + dz * r0 }, { c.x + dx * r1, c.y + kBulletHeight, c.z + dz * r1 }, kColorPort);
+			lm->DrawLine({ c.x + dx * r0, c.y + kBulletHeight, c.z + dz * r0 }, { c.x + dx * r1, c.y + kBulletHeight, c.z + dz * r1 }, fx(params_.portColor));
 		}
 	}
 
 	// 弾（仮表示：ワイヤーの球。半径は判定と同じ）
 	for (const Bullet& b : bullets_) {
 
-		lm->DrawSphere(b.position, params_.bulletSize, kColorBullet, 8);
+		lm->DrawSphere(b.position, params_.bulletSize, fx(params_.bulletColor), 8);
 	}
 }
 
@@ -329,5 +331,13 @@ void BossAttackBarrage::DrawImGuiParams() {
 	ImGui::SliderFloat("Volley angle shift", &params_.volleyAngleShift, 0.0f, 1.0f);
 	ImGui::DragFloat("Port length", &params_.portLength, 0.05f, 0.0f, 10.0f);
 	ImGui::Text("Bullets : %d  Hits : %d", static_cast<int>(bullets_.size()), hitCount_);
+	if (ImGui::TreeNode("Colors (演出の色)")) {
+		ImGui::ColorEdit4("deployColor", &params_.deployColor.x);
+		ImGui::ColorEdit4("stunColor", &params_.stunColor.x);
+		ImGui::ColorEdit4("portColor", &params_.portColor.x);
+		ImGui::ColorEdit4("warningColor", &params_.warningColor.x);
+		ImGui::ColorEdit4("bulletColor", &params_.bulletColor.x);
+		ImGui::TreePop();
+	}
 #endif
 }

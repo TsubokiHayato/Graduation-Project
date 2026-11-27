@@ -38,6 +38,9 @@ public:
 	TuboEngine::Math::Vector3 GetTargetPosition() const;
 	float GetTargetRadius() const { return targetRadius_; }
 
+	// プレビューを今の時刻で計算し直す（ボスの形態や見た目を外で変えたときにも呼ぶ）
+	void MarkDirty() { dirty_ = true; }
+
 private:
 	// ---- 各ウィンドウ ----
 	void DrawPatternWindow();
@@ -58,8 +61,6 @@ private:
 
 	// クリップの開始時刻を吸着させる
 	float Snap(float time) const;
-	// プレビューを今の時刻で計算し直す
-	void MarkDirty() { dirty_ = true; }
 
 	// ---- クリップの数値 ----
 	// 標準の数値との差（変えた項目だけ）

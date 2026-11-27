@@ -1,5 +1,6 @@
 #pragma once
 #include "BossAttackState.h"
+#include "Vector4.h"
 #include <vector>
 
 // =============================================================================
@@ -24,6 +25,12 @@ public:
 		// --- 演出／配置 ---
 		float volleyAngleShift = 0.5f; // 一斉射ごとの角度のずらし（弾と弾の間隔に対する割合。0.5 で隙間の真ん中）
 		float portLength = 1.5f;       // 予兆で展開する砲門の長さ
+		// --- 演出の色（体の色は形態の色、線の色は形態の effectTint が掛け合わされる） ---
+		TuboEngine::Math::Vector4 deployColor = {1.0f, 0.85f, 0.3f, 1.0f}; // 砲門展開中
+		TuboEngine::Math::Vector4 stunColor = {0.5f, 0.5f, 0.6f, 1.0f}; // 硬直中
+		TuboEngine::Math::Vector4 portColor = {1.0f, 0.8f, 0.2f, 1.0f}; // 砲門
+		TuboEngine::Math::Vector4 warningColor = {1.0f, 0.1f, 0.1f, 1.0f}; // 赤い警告表示
+		TuboEngine::Math::Vector4 bulletColor = {1.0f, 0.3f, 0.8f, 1.0f}; // 弾
 	};
 
 public:

@@ -52,6 +52,22 @@ public:
 	// 攻撃（パターン）を始めたときに呼ばれる（引数はパターン名。チュートリアルの指示表示などに使う）
 	using AttackStartedCallback = std::function<void(const std::string& patternName)>;
 
+	// 演出の合図（ライティング・音・カメラなどの制御側が受け取って演出を始める。ボス自身は光などを持たない）
+	struct Cue {
+		enum class Type {
+			TransitionStart, // 形態の移行演出が始まった
+			TransitionEnd,   // 形態の移行演出が終わった
+			Defeated,        // 撃破された
+		};
+		Type type;
+		std::string name;  // 形態・ボス共通のデータで決めた合図の名前（空のこともある）
+		int phaseIndex;    // 関係する形態（移行先の形態。撃破ならそのときの形態）
+	};
+	using CueCallback = std::function<void(const Cue& cue)>;
+
+	// アニメーションの指示（再生する側が受け取る。duration はその状態の長さで、再生速度を合わせるのに使える。0 なら長さが決まっていない）
+	using AnimationCallback = std::function<void(const std::string& animationName, float duration)>;
+
 	// ボスの状態
 	enum class State {
 		Idle,       // 待機（次の攻撃の前に自機の方を向く）
@@ -104,6 +120,10 @@ public:
 	void SetDefeatedCallback(DefeatedCallback callback) { onDefeated_ = std::move(callback); }
 	// 攻撃を始めたときの処理を設定
 	void SetAttackStartedCallback(AttackStartedCallback callback) { onAttackStarted_ = std::move(callback); }
+	// 演出の合図を受け取る処理を設定
+	void SetCueCallback(CueCallback callback) { onCue_ = std::move(callback); }
+	// アニメーションの指示を受け取る処理を設定（状態が変わるたびに呼ばれる）
+	void SetAnimationCallback(AnimationCallback callback) { onAnimation_ = std::move(callback); }
 
 	// ステージの広さを設定
 	void SetStageRadius(float radius) { stageRadius_ = radius; }
@@ -155,6 +175,11 @@ public:
 		if (onHit_) {
 			onHit_(damage);
 		}
+	}
+
+	// 攻撃範囲・弾・ビームの線の色に、形態の effectTint を掛け合わせる（攻撃の DrawLines から使う）
+	TuboEngine::Math::Vector4 TintEffect(const TuboEngine::Math::Vector4& color) const {
+		return {color.x * look_.effectTint.x, color.y * look_.effectTint.y, color.z * look_.effectTint.z, color.w * look_.effectTint.w};
 	}
 
 	// 攻撃がボスを動かしてよいか（BossAttackState が攻撃の処理の間だけ切り替える）
@@ -217,6 +242,14 @@ public:
 	// プレビュー中のパターンの経過時間
 	float GetPreviewTime() const;
 
+	// 見た目の確認用：その形態にすぐ切り替える（移行演出なし。攻撃は打ち切る）
+	void ForcePhase(int phaseIndex);
+	// 見た目の確認用：ひとつ前の形態から、その形態への移行演出を再生する（合図も出す）
+	void PlayTransitionPreview(int phaseIndex);
+	// いま出しているアニメーションの指示（確認用）
+	const std::string& GetCurrentAnimation() const { return currentAnimation_; }
+	float GetCurrentAnimationDuration() const { return currentAnimationDuration_; }
+
 	// 一時停止（止まっている間も警告範囲は描く）
 	void SetPaused(bool paused) { dePaused_ = paused; }
 	bool IsPaused() const { return dePaused_; }
@@ -274,6 +307,12 @@ private:
 
 	// 座標・回転・色の適用
 	void ApplyObjectTransform();
+	// 演出の合図を出す
+	void EmitCue(Cue::Type type, const std::string& name, int phaseIndex);
+	// 状態に合ったアニメーションの指示を出す（変わったときだけ）
+	void UpdateAnimationRequest();
+	// ボスの向きで回したオフセット（大きさに合わせて伸ばす）
+	TuboEngine::Math::Vector3 LocalToWorldOffset(const TuboEngine::Math::Vector3& offset) const;
 	// コアの向き（狙える範囲）をラインで描く
 	void DrawCoreLines() const;
 	// ImGui の各部分
@@ -285,9 +324,14 @@ private:
 	// ボスのオブジェクト
 	std::unique_ptr<TuboEngine::Object3d> object_;
 
-	TuboEngine::Math::Vector3 center_ = {0.0f, 0.0f, 0.0f};      // ステージ中央（ボスの基準位置）
+	// 背中のコアのオブジェクト
+	std::unique_ptr<TuboEngine::Object3d> core_;
 
-	float baseHeight_ = 1.0f;                                    // 大きさ1のときの通常の高さ（ブロックが地面に乗る高さ）
+	std::string appliedCoreModel_;                               // いまコアに使っているモデル
+
+	std::string appliedTexture_;                                 // いまボスに使っているテクスチャ（空ならモデルのもの）
+
+	TuboEngine::Math::Vector3 center_ = {0.0f, 0.0f, 0.0f};      // ステージ中央（ボスの基準位置）
 
 	float height_ = 0.0f;                                        // 基準からの上昇量
 
@@ -349,6 +393,17 @@ private:
 	DefeatedCallback onDefeated_;
 
 	AttackStartedCallback onAttackStarted_;
+
+	CueCallback onCue_;
+
+	AnimationCallback onAnimation_;
+
+	// アニメーションの指示（状態・攻撃・段階が変わったら出し直す）
+	const void* animationKeyAttack_ = nullptr;
+	int animationKeyState_ = -1;
+	int animationKeyStep_ = -1;
+	std::string currentAnimation_;
+	float currentAnimationDuration_ = 0.0f;
 
 	float stageRadius_ = 20.0f;
 

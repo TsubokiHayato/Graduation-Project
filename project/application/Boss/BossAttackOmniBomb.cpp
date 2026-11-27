@@ -19,10 +19,6 @@ Math::Vector4 LerpColor(const Math::Vector4& a, const Math::Vector4& b, float t)
 }
 
 const Math::Vector4 kColorNormal = {1.0f, 1.0f, 1.0f, 1.0f};
-const Math::Vector4 kColorGlow = {1.0f, 0.55f, 0.1f, 1.0f};   // 予兆の発光色
-const Math::Vector4 kColorBlast = {1.0f, 1.0f, 0.85f, 1.0f};  // 爆発の瞬間
-const Math::Vector4 kColorStun = {0.35f, 0.35f, 0.45f, 1.0f}; // 硬直中（出力が落ちた見た目）
-const Math::Vector4 kColorWarning = {1.0f, 0.1f, 0.1f, 1.0f}; // 赤い警告表示
 
 } // namespace
 
@@ -31,7 +27,12 @@ const Math::Vector4 kColorWarning = {1.0f, 0.1f, 0.1f, 1.0f}; // 赤い警告表
 	X("radius", radius)	\
 	X("riseHeight", riseHeight)	\
 	X("blastTime", blastTime)	\
-	X("landTime", landTime)
+	X("landTime", landTime)	\
+	X("glowColor", glowColor)	\
+	X("blastColor", blastColor)	\
+	X("stunColor", stunColor)	\
+	X("warningColor", warningColor)	\
+	X("countdownColor", countdownColor)
 TUBO_JSON_DEFINE(BossAttackOmniBomb::Params, OMNIBOMB_PARAM_FIELDS)
 
 void BossAttackOmniBomb::SaveParams(JsonManager::Json& json) const {
@@ -79,7 +80,7 @@ void BossAttackOmniBomb::UpdateTelegraph(Boss& boss, float t) {
 	const float freq = 2.0f + 8.0f * t; // 2Hz → 10Hz
 	const float blink = 0.5f + 0.5f * std::sin(2.0f * kPi * freq * GetStepTimer());
 	const float glow = (0.3f + 0.7f * t) * (0.4f + 0.6f * blink);
-	boss.SetColor(LerpColor(kColorNormal, kColorGlow, glow));
+	boss.SetColor(LerpColor(kColorNormal, params_.glowColor, glow));
 }
 
 // -----------------------------------------------------------------------------
@@ -87,7 +88,7 @@ void BossAttackOmniBomb::UpdateTelegraph(Boss& boss, float t) {
 // -----------------------------------------------------------------------------
 void BossAttackOmniBomb::UpdateAttack(Boss& boss, float t) {
 	boss.SetHeight(params_.riseHeight);
-	boss.SetColor(LerpColor(kColorBlast, kColorStun, Easing::InQuad(t)));
+	boss.SetColor(LerpColor(params_.blastColor, params_.stunColor, Easing::InQuad(t)));
 }
 
 // -----------------------------------------------------------------------------
@@ -100,7 +101,7 @@ void BossAttackOmniBomb::UpdateRecovery(Boss& boss, float t) {
 
 	// 硬直の終わり際（残り3割）で元の色へ戻す
 	const float recoverT = std::clamp((t - 0.7f) / 0.3f, 0.0f, 1.0f);
-	boss.SetColor(LerpColor(kColorStun, kColorNormal, recoverT));
+	boss.SetColor(LerpColor(params_.stunColor, kColorNormal, recoverT));
 }
 
 void BossAttackOmniBomb::OnExit(Boss& boss) {
@@ -124,6 +125,8 @@ bool BossAttackOmniBomb::IsHit(const Boss& boss) const {
 //  ライン描画：警告範囲と衝撃波
 // -----------------------------------------------------------------------------
 void BossAttackOmniBomb::DrawLines(const Boss& boss) const {
+	// 線の色には形態の effectTint を掛け合わせる
+	auto fx = [&boss](const Math::Vector4& color) { return boss.TintEffect(color); };
 	const Math::Vector3 c = boss.GetCenter();
 	const Math::Vector3 ground = {c.x, c.y + 0.05f, c.z};
 
@@ -132,12 +135,12 @@ void BossAttackOmniBomb::DrawLines(const Boss& boss) const {
 		const float t = StepProgress(common_.telegraphTime);
 		// 警告範囲（＝実際の判定範囲）を赤く点滅表示
 		const float blink = 0.5f + 0.5f * std::sin(2.0f * kPi * (2.0f + 6.0f * t) * GetStepTimer());
-		Math::Vector4 warn = kColorWarning;
+		Math::Vector4 warn = fx(params_.warningColor);
 		warn.w = 0.5f + 0.5f * blink;
 		DrawGroundCircle(ground, params_.radius, warn);
 		DrawGroundCircle(ground, params_.radius * 0.995f, warn);
 		// 中心から外へ広がる輪で発射までの残り時間を示す
-		DrawGroundCircle(ground, params_.radius * t, {1.0f, 0.4f, 0.1f, 1.0f});
+		DrawGroundCircle(ground, params_.radius * t, fx(params_.countdownColor));
 		break;
 	}
 	case Step::Attack: {
@@ -145,7 +148,7 @@ void BossAttackOmniBomb::DrawLines(const Boss& boss) const {
 		// 衝撃波：中心から爆撃の半径まで一気に広がる
 		const float r = params_.radius * Easing::OutCubic(t);
 		const Math::Vector4 col = {1.0f, 0.9f - 0.6f * t, 0.3f, 1.0f};
-		DrawGroundCircle(ground, r, col);
+		DrawGroundCircle(ground, r, fx(col));
 		break;
 	}
 	default:
@@ -163,5 +166,13 @@ void BossAttackOmniBomb::DrawImGuiParams() {
 	ImGui::DragFloat("Blast time", &params_.blastTime, 0.01f, 0.05f, 3.0f);
 	ImGui::DragFloat("Land time", &params_.landTime, 0.01f, 0.05f, 3.0f);
 	ImGui::Text("Last hit : %s", lastHitResult_ ? "HIT" : "-");
+	if (ImGui::TreeNode("Colors (演出の色)")) {
+		ImGui::ColorEdit4("glowColor", &params_.glowColor.x);
+		ImGui::ColorEdit4("blastColor", &params_.blastColor.x);
+		ImGui::ColorEdit4("stunColor", &params_.stunColor.x);
+		ImGui::ColorEdit4("warningColor", &params_.warningColor.x);
+		ImGui::ColorEdit4("countdownColor", &params_.countdownColor.x);
+		ImGui::TreePop();
+	}
 #endif
 }

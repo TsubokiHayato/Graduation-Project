@@ -1,5 +1,6 @@
 #pragma once
 #include "BossAttackState.h"
+#include "Vector4.h"
 
 // =============================================================================
 //  BossAttackLockOnBeam（ロックオンビーム）
@@ -22,6 +23,15 @@ public:
 		float fireTime = 1.0f;     // 照射時間（判定が続く長さ）
 		// --- 演出 ---
 		float trackingSpeed = 3.0f; // 照準が自機の角度を追う速さ（ラジアン/秒）
+		// --- 演出の色（体の色は形態の色、線の色は形態の effectTint が掛け合わされる） ---
+		TuboEngine::Math::Vector4 chargeColor = {1.0f, 0.3f, 0.3f, 1.0f}; // 追尾中（赤みがかる）
+		TuboEngine::Math::Vector4 lockedColor = {1.0f, 0.1f, 0.1f, 1.0f}; // ロック確定
+		TuboEngine::Math::Vector4 fireColor = {0.8f, 1.0f, 1.0f, 1.0f}; // 照射中
+		TuboEngine::Math::Vector4 stunColor = {0.4f, 0.4f, 0.5f, 1.0f}; // 硬直中
+		TuboEngine::Math::Vector4 aimColor = {1.0f, 0.6f, 0.1f, 1.0f}; // 追尾中の照準線
+		TuboEngine::Math::Vector4 warningColor = {1.0f, 0.1f, 0.1f, 1.0f}; // 赤い警告表示
+		TuboEngine::Math::Vector4 beamColor = {0.4f, 0.9f, 1.0f, 1.0f}; // ビーム
+		TuboEngine::Math::Vector4 countdownColor = {1.0f, 0.4f, 0.1f, 1.0f}; // 攻撃までの残り時間を示す線
 	};
 
 public:

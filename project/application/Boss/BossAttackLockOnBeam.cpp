@@ -26,13 +26,6 @@ float WrapAngle(float a) {
 }
 
 const Math::Vector4 kColorNormal = {1.0f, 1.0f, 1.0f, 1.0f};
-const Math::Vector4 kColorCharge = {1.0f, 0.3f, 0.3f, 1.0f};  // 追尾中（赤みがかる）
-const Math::Vector4 kColorLocked = {1.0f, 0.1f, 0.1f, 1.0f};  // ロック確定
-const Math::Vector4 kColorFire = {0.8f, 1.0f, 1.0f, 1.0f};    // 照射中
-const Math::Vector4 kColorStun = {0.4f, 0.4f, 0.5f, 1.0f};    // 硬直中
-const Math::Vector4 kColorAim = {1.0f, 0.6f, 0.1f, 1.0f};     // 追尾中の照準線
-const Math::Vector4 kColorWarning = {1.0f, 0.1f, 0.1f, 1.0f}; // 赤い警告表示
-const Math::Vector4 kColorBeam = {0.4f, 0.9f, 1.0f, 1.0f};    // ビーム
 } // namespace
 
 // 固有パラメータの JSON 変換（Resources/Boss.json の "attacks" → "LockOnBeam" → "params"）
@@ -41,7 +34,15 @@ const Math::Vector4 kColorBeam = {0.4f, 0.9f, 1.0f, 1.0f};    // ビーム
 	X("evadeTime", evadeTime)	\
 	X("beamWidth", beamWidth)	\
 	X("fireTime", fireTime)	\
-	X("trackingSpeed", trackingSpeed)
+	X("trackingSpeed", trackingSpeed)	\
+	X("chargeColor", chargeColor)	\
+	X("lockedColor", lockedColor)	\
+	X("fireColor", fireColor)	\
+	X("stunColor", stunColor)	\
+	X("aimColor", aimColor)	\
+	X("warningColor", warningColor)	\
+	X("beamColor", beamColor)	\
+	X("countdownColor", countdownColor)
 TUBO_JSON_DEFINE(BossAttackLockOnBeam::Params, LOCKONBEAM_PARAM_FIELDS)
 
 void BossAttackLockOnBeam::SaveParams(JsonManager::Json& json) const {
@@ -100,12 +101,12 @@ void BossAttackLockOnBeam::UpdateTelegraph(Boss& boss, float t) {
 		aimAngle_ = WrapAngle(aimAngle_ + std::clamp(diff, -maxStep, maxStep));
 
 		const float trackT = params_.trackingTime > 0.0f ? GetStepTimer() / params_.trackingTime : 1.0f;
-		boss.SetColor(LerpColor(kColorNormal, kColorCharge, std::clamp(trackT, 0.0f, 1.0f) * 0.6f));
+		boss.SetColor(LerpColor(kColorNormal, params_.chargeColor, std::clamp(trackT, 0.0f, 1.0f) * 0.6f));
 	} else {
 		// ロック確定：照準は止まったまま。発射が近づくほど速く点滅
 		const float lockT = params_.evadeTime > 0.0f ? (GetStepTimer() - params_.trackingTime) / params_.evadeTime : 1.0f;
 		const float blink = 0.5f + 0.5f * std::sin(2.0f * kPi * (4.0f + 8.0f * lockT) * GetStepTimer());
-		boss.SetColor(LerpColor(kColorCharge, kColorLocked, blink));
+		boss.SetColor(LerpColor(params_.chargeColor, params_.lockedColor, blink));
 	}
 	// ボスは照準の方向を向く
 	boss.SetFacingAngle(aimAngle_);
@@ -117,7 +118,7 @@ void BossAttackLockOnBeam::UpdateTelegraph(Boss& boss, float t) {
 void BossAttackLockOnBeam::UpdateAttack(Boss& boss, float t) {
 	(void)t;
 	boss.SetFacingAngle(aimAngle_);
-	boss.SetColor(kColorFire);
+	boss.SetColor(params_.fireColor);
 
 	if (!hasHit_ && IsHit(boss)) {
 		hasHit_ = true;
@@ -131,7 +132,7 @@ void BossAttackLockOnBeam::UpdateAttack(Boss& boss, float t) {
 // -----------------------------------------------------------------------------
 void BossAttackLockOnBeam::UpdateRecovery(Boss& boss, float t) {
 	const float recoverT = std::clamp((t - 0.7f) / 0.3f, 0.0f, 1.0f);
-	boss.SetColor(LerpColor(kColorStun, kColorNormal, recoverT));
+	boss.SetColor(LerpColor(params_.stunColor, kColorNormal, recoverT));
 }
 
 void BossAttackLockOnBeam::OnExit(Boss& boss) {
@@ -186,6 +187,8 @@ void BossAttackLockOnBeam::DrawBand(const Boss& boss, float width, float y, cons
 }
 
 void BossAttackLockOnBeam::DrawLines(const Boss& boss) const {
+	// 線の色には形態の effectTint を掛け合わせる
+	auto fx = [&boss](const Math::Vector4& color) { return boss.TintEffect(color); };
 	const Math::Vector3& c = boss.GetCenter();
 	const float len = boss.GetStageRadius();
 	const float dirX = std::cos(aimAngle_);
@@ -196,17 +199,17 @@ void BossAttackLockOnBeam::DrawLines(const Boss& boss) const {
 	case Step::Telegraph:
 		if (!IsLocked()) {
 			// 追尾中：照準線（細い線）
-			lm->DrawLine({c.x, c.y + 0.05f, c.z}, {c.x + dirX * len, c.y + 0.05f, c.z + dirZ * len}, kColorAim);
+			lm->DrawLine({c.x, c.y + 0.05f, c.z}, {c.x + dirX * len, c.y + 0.05f, c.z + dirZ * len}, fx(params_.aimColor));
 		} else {
 			// ロック確定：ビームの範囲（＝実際の判定範囲）を赤く点滅表示
 			const float lockT = params_.evadeTime > 0.0f ? (GetStepTimer() - params_.trackingTime) / params_.evadeTime : 1.0f;
 			const float blink = 0.5f + 0.5f * std::sin(2.0f * kPi * (4.0f + 8.0f * lockT) * GetStepTimer());
-			Math::Vector4 warn = kColorWarning;
+			Math::Vector4 warn = fx(params_.warningColor);
 			warn.w = 0.5f + 0.5f * blink;
 			DrawBand(boss, params_.beamWidth, 0.05f, warn);
 			// 中心線が端へ伸びていき、発射までの残り時間を示す
 			const float l = len * std::clamp(lockT, 0.0f, 1.0f);
-			lm->DrawLine({c.x, c.y + 0.05f, c.z}, {c.x + dirX * l, c.y + 0.05f, c.z + dirZ * l}, {1.0f, 0.4f, 0.1f, 1.0f});
+			lm->DrawLine({c.x, c.y + 0.05f, c.z}, {c.x + dirX * l, c.y + 0.05f, c.z + dirZ * l}, fx(params_.countdownColor));
 		}
 		break;
 	case Step::Attack: {
@@ -217,8 +220,8 @@ void BossAttackLockOnBeam::DrawLines(const Boss& boss) const {
 		constexpr int kLayers = 5;
 		for (int i = 0; i < kLayers; ++i) {
 			const float w = width * (static_cast<float>(i + 1) / kLayers);
-			DrawBand(boss, w, 0.5f, LerpColor(kColorBeam, kColorNormal, static_cast<float>(kLayers - 1 - i) / kLayers));
-			DrawBand(boss, w, 1.0f, kColorBeam);
+			DrawBand(boss, w, 0.5f, LerpColor(fx(params_.beamColor), kColorNormal, static_cast<float>(kLayers - 1 - i) / kLayers));
+			DrawBand(boss, w, 1.0f, fx(params_.beamColor));
 		}
 		break;
 	}
@@ -238,5 +241,16 @@ void BossAttackLockOnBeam::DrawImGuiParams() {
 	ImGui::DragFloat("Fire time", &params_.fireTime, 0.05f, 0.05f, 10.0f);
 	ImGui::DragFloat("Tracking speed", &params_.trackingSpeed, 0.05f, 0.1f, 20.0f);
 	ImGui::Text("Last hit : %s", lastHitResult_ ? "HIT" : "-");
+	if (ImGui::TreeNode("Colors (演出の色)")) {
+		ImGui::ColorEdit4("chargeColor", &params_.chargeColor.x);
+		ImGui::ColorEdit4("lockedColor", &params_.lockedColor.x);
+		ImGui::ColorEdit4("fireColor", &params_.fireColor.x);
+		ImGui::ColorEdit4("stunColor", &params_.stunColor.x);
+		ImGui::ColorEdit4("aimColor", &params_.aimColor.x);
+		ImGui::ColorEdit4("warningColor", &params_.warningColor.x);
+		ImGui::ColorEdit4("beamColor", &params_.beamColor.x);
+		ImGui::ColorEdit4("countdownColor", &params_.countdownColor.x);
+		ImGui::TreePop();
+	}
 #endif
 }

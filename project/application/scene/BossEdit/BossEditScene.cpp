@@ -42,6 +42,7 @@ void BossEditScene::Initialize() {
 	target_->SetCamera(camera_.get());
 
 	editor_.Initialize(boss_.get());
+	lookEditor_.Initialize(boss_.get());
 }
 
 // =============================================================================
@@ -54,7 +55,18 @@ void BossEditScene::Update() {
 	const Math::Vector3 targetPos = editor_.GetTargetPosition();
 	boss_->SetTarget(targetPos, editor_.GetTargetRadius());
 	boss_->SetStageRadius(stageRadius_);
-	editor_.Update();
+
+	// 形態を切り替えた・移行演出を見終わったら、タイムラインのプレビューを計算し直す
+	const bool phaseChanged = lookEditor_.ConsumePhaseChanged();
+	const bool transitionFinished = lookEditor_.ConsumeTransitionFinished();
+	if (phaseChanged || transitionFinished) {
+		editor_.MarkDirty();
+	}
+	if (lookEditor_.IsPlayingTransition()) {
+		boss_->SetPaused(false); // 移行演出の再生中はタイムラインのプレビューを止めておく
+	} else {
+		editor_.Update();
+	}
 
 	// ボス（一時停止中も攻撃範囲のラインは描く）
 	boss_->Update(dt);
@@ -100,6 +112,7 @@ void BossEditScene::ParticleDraw() {}
 void BossEditScene::ImGuiDraw() {
 #ifdef USE_IMGUI
 	editor_.DrawImGui();
+	lookEditor_.DrawImGui();
 	boss_->DrawImGui(); // 攻撃の標準の数値・形態の重みなど
 
 	if (ImGui::Begin("Boss Edit Camera")) {

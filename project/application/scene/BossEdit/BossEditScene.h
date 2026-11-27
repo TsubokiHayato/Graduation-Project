@@ -1,5 +1,6 @@
 #pragma once
 #include "Boss/Boss.h"
+#include "BossLookEditor.h"
 #include "BossTimelineEditor.h"
 #include "Camera.h"
 #include "IScene.h"
@@ -10,7 +11,8 @@
 //  BossEditScene
 //  ボスの攻撃パターンをタイムラインで作るシーン。
 //  中央にボス、的（自機の代わり）を置き、作ったパターンをその場で再生・好きな時刻へ移動して確かめる。
-//  編集画面は BossTimelineEditor（Boss Edit / Boss Timeline / Clip Inspector の3つのウィンドウ）。
+//  編集画面は BossTimelineEditor（Boss Edit / Boss Timeline / Clip Inspector）と
+//  BossLookEditor（Boss Look：形態ごとの見た目・コア・移行演出・合図・アニメーション名）。
 // =============================================================================
 class BossEditScene : public IScene {
 public:
@@ -38,4 +40,5 @@ private:
 	std::unique_ptr<TuboEngine::Object3d> target_;
 
 	BossTimelineEditor editor_;
+	BossLookEditor lookEditor_;
 };

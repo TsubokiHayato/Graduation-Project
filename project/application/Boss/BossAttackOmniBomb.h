@@ -1,5 +1,6 @@
 #pragma once
 #include "BossAttackState.h"
+#include "Vector4.h"
 
 // =============================================================================
 //  BossAttackOmniBomb（全方位爆撃）
@@ -16,6 +17,12 @@ public:
 		float riseHeight = 4.0f; // 予兆で上昇する高さ
 		float blastTime = 0.5f;  // 爆発（衝撃波が広がる）時間（秒）
 		float landTime = 0.6f;   // 硬直に入ってから元の高さへ降りる時間（秒）
+		// --- 演出の色（体の色は形態の色、線の色は形態の effectTint が掛け合わされる） ---
+		TuboEngine::Math::Vector4 glowColor = {1.0f, 0.55f, 0.1f, 1.0f}; // 予兆の発光色
+		TuboEngine::Math::Vector4 blastColor = {1.0f, 1.0f, 0.85f, 1.0f}; // 爆発の瞬間
+		TuboEngine::Math::Vector4 stunColor = {0.35f, 0.35f, 0.45f, 1.0f}; // 硬直中（出力が落ちた見た目）
+		TuboEngine::Math::Vector4 warningColor = {1.0f, 0.1f, 0.1f, 1.0f}; // 赤い警告表示
+		TuboEngine::Math::Vector4 countdownColor = {1.0f, 0.4f, 0.1f, 1.0f}; // 攻撃までの残り時間を示す線
 	};
 
 public:

@@ -1,5 +1,6 @@
 #pragma once
 #include "BossAttackState.h"
+#include "Vector4.h"
 
 // =============================================================================
 //  BossAttackSweep（近接薙ぎ払い）
@@ -20,6 +21,13 @@ public:
 		// --- 演出 ---
 		float swingTime = 0.3f;   // 腕を振り抜く時間（秒）。この間が判定の出ている時間
 		float windUpDeg = 40.0f;  // 振りかぶりで扇の端からさらに後ろへ引く角度（度）
+		// --- 演出の色（体の色は形態の色、線の色は形態の effectTint が掛け合わされる） ---
+		TuboEngine::Math::Vector4 windUpColor = {1.0f, 0.4f, 0.2f, 1.0f}; // 振りかぶり
+		TuboEngine::Math::Vector4 swingColor = {1.0f, 1.0f, 0.8f, 1.0f}; // 振り抜き
+		TuboEngine::Math::Vector4 stunColor = {0.4f, 0.4f, 0.5f, 1.0f}; // 硬直中
+		TuboEngine::Math::Vector4 warningColor = {1.0f, 0.1f, 0.1f, 1.0f}; // 赤い警告表示
+		TuboEngine::Math::Vector4 armColor = {1.0f, 0.8f, 0.3f, 1.0f}; // 腕
+		TuboEngine::Math::Vector4 countdownColor = {1.0f, 0.4f, 0.1f, 1.0f}; // 攻撃までの残り時間を示す線
 	};
 
 public:

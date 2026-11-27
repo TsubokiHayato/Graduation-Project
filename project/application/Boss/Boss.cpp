@@ -7,6 +7,7 @@
 #include "BossAttackSweep.h"
 #include "Camera.h"
 #include "LineManager.h"
+#include "Model.h"
 #include "ModelManager.h"
 #include <algorithm>
 #include <cmath>
@@ -30,11 +31,9 @@ Math::Vector4 LerpColor(const Math::Vector4& a, const Math::Vector4& b, float t)
 }
 
 const Math::Vector4 kColorNormal = {1.0f, 1.0f, 1.0f, 1.0f};
-const Math::Vector4 kColorTransition = {1.0f, 0.2f, 0.9f, 1.0f}; // 移行演出の発光色
 const Math::Vector4 kColorDefeated = {0.2f, 0.2f, 0.2f, 1.0f};   // 撃破後
 const Math::Vector4 kColorCore = {0.2f, 1.0f, 1.0f, 1.0f};       // コアの向きの表示
 
-constexpr float kTransitionRise = 1.5f; // 移行演出で浮き上がる高さ
 
 // 保存する小数を小数点以下4桁に丸める（float の誤差で 0.800000011920929 のようにならないように）
 void RoundFloats(JsonManager::Json& json) {
@@ -57,10 +56,17 @@ Boss::~Boss() = default;
 void Boss::Initialize(TuboEngine::Camera* camera, const Math::Vector3& center) {
 	// 見た目（モデルは形態の見た目で差し替える）
 	object_ = std::make_unique<Object3d>();
-	object_->Initialize("block/block.obj");
+	object_->Initialize("boss_block/boss_block.obj");
 	object_->SetCamera(camera);
 	object_->SetScale({1.0f, 1.0f, 1.0f});
-	appliedModel_ = "block/block.obj";
+	appliedModel_ = "boss_block/boss_block.obj";
+	appliedTexture_.clear();
+
+	// 背中のコア（モデルは形態の見た目で差し替える）
+	core_ = std::make_unique<Object3d>();
+	core_->Initialize("boss_core/boss_core.obj");
+	core_->SetCamera(camera);
+	appliedCoreModel_ = "boss_core/boss_core.obj";
 
 	center_ = center;
 	yaw_ = 0.0f;
@@ -85,6 +91,9 @@ void Boss::Restart() {
 	ResetPhaseRuntime();
 	ApplyLook(GetPhase().look);
 	EnterIdle(data_.common.firstDelay);
+	animationKeyState_ = -1;
+	animationKeyAttack_ = nullptr;
+	animationKeyStep_ = -1;
 	ApplyObjectTransform();
 }
 
@@ -104,12 +113,15 @@ void Boss::Update(float deltaTime) {
 	// HP 以外のきっかけ（今後足す部位破壊など）もここで毎フレーム調べる
 	CheckPhaseTriggers();
 
+	// 状態に合ったアニメーションの指示
+	UpdateAnimationRequest();
+
 	if (deDrawLines_) {
 		// 攻撃範囲のライン描画
 		if (currentPattern_) {
 			currentPattern_->DrawLines(*this);
 		}
-		if (state_ != State::Defeated) {
+		if (state_ != State::Defeated && look_.core.showArcLines) {
 			DrawCoreLines();
 		}
 	}
@@ -119,11 +131,16 @@ void Boss::Update(float deltaTime) {
 
 	// オブジェクトの更新
 	object_->Update();
+	core_->Update();
 }
 
 void Boss::Draw() {
 
 	object_->Draw();
+
+	if (look_.core.visible) {
+		core_->Draw();
+	}
 }
 
 // =============================================================================
@@ -186,24 +203,27 @@ void Boss::UpdateActing(float deltaTime) {
 // -----------------------------------------------------------------------------
 void Boss::UpdateTransition(float deltaTime) {
 	stateTimer_ += deltaTime;
+	const BossTransitionData& tr = GetPhase().transition;
 	const float duration = GetPhase().transitionTime;
 	const float t = duration > 0.0f ? std::clamp(stateTimer_ / duration, 0.0f, 1.0f) : 1.0f;
 
-	// 半分を過ぎたら新しい形態の見た目に切り替える
-	if (!transitionLookApplied_ && t >= 0.5f) {
+	// 決めた時点を過ぎたら新しい形態の見た目に切り替える
+	if (!transitionLookApplied_ && t >= tr.lookSwitchRatio) {
 		transitionLookApplied_ = true;
 		ApplyLook(GetPhase().look);
 	}
 
-	// 浮き上がって戻る。だんだん速く点滅する
-	height_ = kTransitionRise * std::sin(kPi * t);
-	const float blink = 0.5f + 0.5f * std::sin(2.0f * kPi * (2.0f + 10.0f * t) * stateTimer_);
-	color_ = LerpColor(kColorNormal, kColorTransition, blink * std::sin(kPi * t));
+	// 浮き上がって戻る。点滅はだんだん速くなる
+	height_ = tr.riseHeight * std::sin(kPi * t);
+	const float hz = tr.blinkStartHz + (tr.blinkEndHz - tr.blinkStartHz) * t;
+	const float blink = 0.5f + 0.5f * std::sin(2.0f * kPi * hz * stateTimer_);
+	color_ = LerpColor(kColorNormal, tr.glowColor, blink * std::sin(kPi * t));
 
 	if (t >= 1.0f) {
 		height_ = 0.0f;
 		color_ = kColorNormal;
 		ApplyLook(GetPhase().look);
+		EmitCue(Cue::Type::TransitionEnd, tr.endCue, phaseIndex_);
 		EnterIdle(GetPhase().idleTime);
 	}
 }
@@ -375,6 +395,7 @@ void Boss::StartTransition(int nextPhase) {
 	if (onPhaseChanged_) {
 		onPhaseChanged_(phaseIndex_, GetPhase().name);
 	}
+	EmitCue(Cue::Type::TransitionStart, GetPhase().transition.startCue, phaseIndex_);
 }
 
 void Boss::Defeat() {
@@ -385,6 +406,7 @@ void Boss::Defeat() {
 	if (onDefeated_) {
 		onDefeated_();
 	}
+	EmitCue(Cue::Type::Defeated, data_.common.defeatCue, phaseIndex_);
 }
 
 void Boss::ResetPhaseRuntime() {
@@ -393,14 +415,135 @@ void Boss::ResetPhaseRuntime() {
 
 void Boss::ApplyLook(const BossLookData& look) {
 	look_ = look;
-	// モデルの差し替え（変わったときだけ）
+	ModelManager* models = ModelManager::GetInstance();
+
+	// モデルの差し替え（変わったときだけ。読み込めなければ今のまま）
 	if (!look_.model.empty() && look_.model != appliedModel_) {
-		ModelManager::GetInstance()->LoadModel(look_.model);
-		if (ModelManager::GetInstance()->FindModel(look_.model)) {
+		models->LoadModel(look_.model);
+		if (models->FindModel(look_.model)) {
 			object_->SetModel(look_.model);
 			appliedModel_ = look_.model;
 		}
 	}
+	// テクスチャの差し替え（ボスだけに効く。空ならモデルのテクスチャ。読み込めなければ今のまま）
+	if (look_.texture != appliedTexture_) {
+		if (object_->SetTexture(look_.texture)) {
+			appliedTexture_ = look_.texture;
+		}
+	}
+	// 材質（ボス専用のモデルなので、ほかのオブジェクトには影響しない）
+	if (Model* model = object_->GetModel()) {
+		model->SetModelShininess(look_.shininess);
+		model->SetModelEnvironmentCoefficient(look_.environmentCoefficient);
+	}
+
+	// コアのモデル
+	if (!look_.core.model.empty() && look_.core.model != appliedCoreModel_) {
+		models->LoadModel(look_.core.model);
+		if (models->FindModel(look_.core.model)) {
+			core_->SetModel(look_.core.model);
+			appliedCoreModel_ = look_.core.model;
+		}
+	}
+}
+
+// =============================================================================
+//  演出の合図・アニメーションの指示
+// =============================================================================
+void Boss::EmitCue(Cue::Type type, const std::string& name, int phaseIndex) {
+	if (onCue_) {
+		onCue_({type, name, phaseIndex});
+	}
+}
+
+void Boss::UpdateAnimationRequest() {
+	// いまの状態・ボスを動かしている攻撃・その段階
+	const BossAttackState* attack = nullptr;
+	int step = -1;
+	if (state_ == State::Acting && currentPattern_) {
+		attack = currentPattern_->GetCurrentAttack();
+		if (attack) {
+			step = static_cast<int>(attack->GetStep());
+		}
+	}
+	if (static_cast<int>(state_) == animationKeyState_ && attack == animationKeyAttack_ && step == animationKeyStep_) {
+		return;
+	}
+	animationKeyState_ = static_cast<int>(state_);
+	animationKeyAttack_ = attack;
+	animationKeyStep_ = step;
+
+	// 形態のアニメーション名の対応から選ぶ
+	const BossAnimationMap& map = GetPhase().animations;
+	std::string name;
+	float duration = 0.0f;
+	switch (state_) {
+	case State::Idle:
+		name = map.idle;
+		break;
+	case State::Transition:
+		name = map.transition;
+		duration = GetPhase().transitionTime;
+		break;
+	case State::Defeated:
+		name = map.defeated;
+		break;
+	case State::Acting:
+		if (!attack) {
+			name = map.idle; // 攻撃と攻撃の間
+			break;
+		}
+		if (auto it = map.attacks.find(attack->GetId()); it != map.attacks.end()) {
+			switch (attack->GetStep()) {
+			case BossAttackState::Step::Telegraph:
+				name = it->second.telegraph;
+				duration = attack->GetTelegraphLength();
+				break;
+			case BossAttackState::Step::Attack:
+				name = it->second.attack;
+				duration = attack->GetAttackLength();
+				break;
+			case BossAttackState::Step::Recovery:
+				name = it->second.recovery;
+				duration = attack->GetRecoveryLength();
+				break;
+			default:
+				break;
+			}
+		}
+		break;
+	}
+
+	currentAnimation_ = name;
+	currentAnimationDuration_ = duration;
+	if (!name.empty() && onAnimation_) {
+		onAnimation_(name, duration);
+	}
+}
+
+// =============================================================================
+//  見た目の確認（BossEdit）
+// =============================================================================
+void Boss::ForcePhase(int phaseIndex) {
+	if (phaseIndex < 0 || phaseIndex >= static_cast<int>(data_.phases.size())) {
+		return;
+	}
+	CancelPattern();
+	phaseIndex_ = phaseIndex;
+	height_ = 0.0f;
+	color_ = kColorNormal;
+	ResetPhaseRuntime();
+	ApplyLook(GetPhase().look);
+	EnterIdle(GetPhase().idleTime);
+}
+
+void Boss::PlayTransitionPreview(int phaseIndex) {
+	if (phaseIndex < 0 || phaseIndex >= static_cast<int>(data_.phases.size())) {
+		return;
+	}
+	// ひとつ前の形態の見た目から始める（最初の形態なら自分の見た目のまま）
+	ForcePhase((std::max)(phaseIndex - 1, 0));
+	StartTransition(phaseIndex);
 }
 
 // =============================================================================
@@ -471,17 +614,40 @@ void Boss::TurnTowardTarget(float deltaTime) {
 // =============================================================================
 //  見た目の反映
 // =============================================================================
+Math::Vector3 Boss::LocalToWorldOffset(const Math::Vector3& offset) const {
+	// Object3d の Y 回転 yaw で、前(+Z) は (sin yaw, 0, cos yaw)、右(+X) は (cos yaw, 0, -sin yaw) を向く
+	const Math::Vector3 scaled = {offset.x * look_.scale.x, offset.y * look_.scale.y, offset.z * look_.scale.z};
+	const float s = std::sin(yaw_);
+	const float c = std::cos(yaw_);
+	return {scaled.x * c + scaled.z * s, scaled.y, -scaled.x * s + scaled.z * c};
+}
+
 void Boss::ApplyObjectTransform() {
 
-	// 大きさに合わせて持ち上げ、底が地面に付くようにする
+	// 体：位置のずれ（モデルの補正）を足し、向きの補正を加える
+	const Math::Vector3 bodyOffset = LocalToWorldOffset(look_.offset);
 	object_->SetScale(look_.scale);
-
-	object_->SetPosition({center_.x, center_.y + baseHeight_ * look_.scale.y + height_, center_.z});
-
-	object_->SetRotation({0.0f, yaw_, 0.0f});
+	object_->SetPosition({center_.x + bodyOffset.x, center_.y + bodyOffset.y + height_, center_.z + bodyOffset.z});
+	object_->SetRotation({look_.rotationDeg.x * kDegToRad, yaw_ + look_.rotationDeg.y * kDegToRad, look_.rotationDeg.z * kDegToRad});
 
 	// 攻撃の演出の色 × 形態の色
 	object_->SetModelColor({color_.x * look_.color.x, color_.y * look_.color.y, color_.z * look_.color.z, color_.w * look_.color.w});
+
+	// コア：背中に付いて回る。硬直中は点滅、撃破後は暗くする
+	const BossCoreLook& core = look_.core;
+	const Math::Vector3 coreOffset = LocalToWorldOffset(core.offset);
+	core_->SetScale({core.scale, core.scale, core.scale});
+	core_->SetPosition({center_.x + coreOffset.x, center_.y + coreOffset.y + height_, center_.z + coreOffset.z});
+	core_->SetRotation({0.0f, yaw_, 0.0f});
+	Math::Vector4 coreColor = core.color;
+	const BossAttackState* attack = (state_ == State::Acting && currentPattern_) ? currentPattern_->GetCurrentAttack() : nullptr;
+	if (attack && attack->GetStep() == BossAttackState::Step::Recovery) {
+		const float blink = 0.5f + 0.5f * std::sin(2.0f * kPi * core.blinkHz * attack->GetStepTimer());
+		coreColor = LerpColor(core.color, core.recoveryColor, blink);
+	} else if (state_ == State::Defeated) {
+		coreColor = LerpColor(core.color, kColorDefeated, 0.8f);
+	}
+	core_->SetModelColor(coreColor);
 }
 
 void Boss::DrawCoreLines() const {
