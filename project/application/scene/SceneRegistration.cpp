@@ -10,6 +10,7 @@
 #include "Member/SatouScene.h"
 #include "Member/TsubokiScene.h"
 #include "Member/MiyamotoScene.h"
+#include "BossEdit/BossEditScene.h"
 
 #include <memory>
 
@@ -26,4 +27,7 @@ void RegisterGameScenes() {
 	sm->RegisterScene(SATOU, [] { return std::make_unique<SatouScene>(); }, "Satou");
 	sm->RegisterScene(TSUBOKI, [] { return std::make_unique<TsubokiScene>(); }, "Tsuboki");
 	sm->RegisterScene(MIYAMOTO, [] { return std::make_unique<MiyamotoScene>(); }, "Miyamoto");
+
+	// ツール
+	sm->RegisterScene(BOSS_EDIT, [] { return std::make_unique<BossEditScene>(); }, "BossEdit");
 }

@@ -34,6 +34,8 @@ public:
 	void DrawLines(const Boss& boss) const override;
 	void SaveParams(TuboEngine::JsonManager::Json& json) const override;
 	void LoadParams(const TuboEngine::JsonManager::Json& json) override;
+	// 攻撃段階の長さはステージ半径（弾が端に届くまで）で変わる
+	void SetupContext(const Boss& boss) override;
 
 	Params& GetParams() { return params_; }
 	int GetHitCount() const { return hitCount_; }

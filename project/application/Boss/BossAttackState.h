@@ -14,12 +14,11 @@ class Boss;
 //  新しい攻撃の追加手順：
 //    1. この基底クラスを継承したクラスを作る（GetId / GetName / 各段階の処理 / 固有パラメータの JSON）
 //    2. BossAttackRegistry.cpp の一覧に1行足す
-//    3. Resources/Boss.json の形態の攻撃一覧に、GetId() の名前で追加する
+//    3. BossEdit シーンのタイムラインに置くか、Resources/Boss.json の形態の攻撃一覧に GetId() の名前で追加する
 //
-//  連続技・同時攻撃（BossAttackPattern）から使うための設定：
-//    ・SetSkipRecovery    ：攻撃段階が終わったら硬直せずに終わる（連続技の途中、同時攻撃の従）
-//    ・SetHoldBeforeRecovery：攻撃段階が終わったら ReleaseHold まで待ってから硬直する（同時攻撃の主）
-//    ・SetControlsBody    ：ボスの向き・高さ・色を動かしてよいか（同時攻撃の従は false）
+//  タイムライン（BossAttackPattern）から使うための設定：
+//    ・SetSkipRecovery ：攻撃段階が終わったら硬直せずに終わる（パターンの最後に終わる攻撃以外）
+//    ・SetControlsBody ：ボスの向き・高さ・色を動かしてよいか
 // =============================================================================
 class BossAttackState {
 public:
@@ -28,7 +27,6 @@ public:
 		Telegraph, // 予兆
 		Attack,    // 攻撃
 		Recovery,  // 硬直
-		Hold,      // 同時攻撃で、ほかの攻撃が終わるのを待っている（主の攻撃段階の後）
 		Finished,  // 終了（ボスが次の攻撃を選ぶ）
 	};
 
@@ -58,12 +56,19 @@ public:
 	// パラメータ調整用
 	void DrawImGui();
 
-	// ---- 連続技・同時攻撃用の設定（Enter の前に設定する） ----
+	// ---- タイムライン用の設定（Enter の前に設定する） ----
 	void SetSkipRecovery(bool skip) { skipRecovery_ = skip; }
-	void SetHoldBeforeRecovery(bool hold) { holdBeforeRecovery_ = hold; }
 	void SetControlsBody(bool controls) { controlsBody_ = controls; }
-	// 同時攻撃の主：待機（Hold）をやめて硬直に入る
-	void ReleaseHold() { holdReleased_ = true; }
+	bool ControlsBody() const { return controlsBody_; }
+	// 硬直の間だけはボスを動かす（パターンの最後の硬直を、ボスを動かさない攻撃が担当するとき）
+	void SetControlsBodyInRecovery(bool controls) { controlsBodyInRecovery_ = controls; }
+
+	// ボスの情報（ステージ半径など）で長さが変わる攻撃は、ここで受け取る（長さを測る前・Enter の前に呼ぶ）
+	virtual void SetupContext(const Boss& boss) { (void)boss; }
+	// 予兆・攻撃・硬直の長さ（秒）。タイムラインの表示と、パターンの長さの計算に使う
+	float GetTelegraphLength() const { return GetTelegraphDuration(); }
+	float GetAttackLength() const { return GetAttackDuration(); }
+	float GetRecoveryLength() const { return common_.recoveryTime; }
 
 	// ---- パラメータの保存・読み込み（Resources/Boss.json の "attacks" の中身） ----
 	// 派生クラスは基底を呼んだうえで固有パラメータ（"params"）を読み書きする
@@ -83,8 +88,6 @@ protected:
 	virtual void UpdateTelegraph(Boss& boss, float t) = 0;
 	virtual void UpdateAttack(Boss& boss, float t) = 0;
 	virtual void UpdateRecovery(Boss& boss, float t) { (void)boss; (void)t; }
-	// 同時攻撃の主が、ほかの攻撃の終わりを待っている間（既定は何もしない＝姿勢を保つ）
-	virtual void UpdateHold(Boss& boss) { (void)boss; }
 	// 攻撃の終わり（硬直の後、または打ち切り時）。弾などはここで片付ける
 	virtual void OnExit(Boss& boss) { (void)boss; }
 
@@ -113,15 +116,16 @@ private:
 	// 段階の時間が過ぎたときの次の段階へ進む処理
 	void AdvanceStep(Boss& boss);
 	void Finish(Boss& boss);
+	// いまボスを動かしてよいか
+	bool IsBodyEnabled() const { return controlsBody_ || (controlsBodyInRecovery_ && step_ == Step::Recovery); }
 	float GetStepDuration(Step step) const;
 
 	Step step_ = Step::Finished;
 	float stepTimer_ = 0.0f;
 	float deltaTime_ = 0.0f;
 
-	// 連続技・同時攻撃用
+	// タイムライン用
 	bool skipRecovery_ = false;
-	bool holdBeforeRecovery_ = false;
-	bool holdReleased_ = false;
 	bool controlsBody_ = true;
+	bool controlsBodyInRecovery_ = false;
 };

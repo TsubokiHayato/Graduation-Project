@@ -84,8 +84,7 @@ float BossAttackSweep::ArmOffset() const {
 	switch (GetStep()) {
 	case Step::Telegraph: return windUp * Easing::OutCubic(StepProgress(GetTelegraphDuration()));
 	case Step::Attack:    return windUp + (-half - windUp) * Easing::OutCubic(StepProgress(params_.swingTime));
-	case Step::Recovery:
-	case Step::Hold:      return -half;
+	case Step::Recovery:  return -half;
 	default:              return 0.0f;
 	}
 }

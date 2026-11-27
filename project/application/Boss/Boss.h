@@ -27,7 +27,8 @@ inline constexpr char kBossJsonPath[] = "Resources/Boss.json";
 //
 //  行動サイクル：待機（自機の方を向く）→ 攻撃（予兆 → 攻撃 → 硬直）→ 待機 → …
 //    ・攻撃は BossAttackState の派生クラス。BossAttackRegistry に並んだものをすべて持つ
-//    ・1回の行動は BossAttackPattern（単発・連続技・同時攻撃）。形態ごとの重み付きランダムで選ぶ
+//    ・1回の行動は BossAttackPattern（攻撃を時刻に並べたタイムライン）。形態ごとの重み付きランダムで選ぶ
+//      タイムラインは BossEdit シーンで作る
 //
 //  形態：Resources/Boss.json の "phases" を上から順に進む。
 //    ・次の形態のきっかけ（いまは HP の割合）を満たしたら、攻撃をすぐに打ち切り、弾も消して移行演出へ
@@ -36,7 +37,7 @@ inline constexpr char kBossJsonPath[] = "Resources/Boss.json";
 //
 //  HP とコア：TakeDamage に攻撃してきた位置を渡す。背中のコアの向きからのときだけ HP が減る
 //
-//  数値はすべて Resources/Boss.json（ImGui で調整して Save）。形態・パターンの組み立ても JSON で行う
+//  数値はすべて Resources/Boss.json（ImGui で調整して Save）。攻撃パターンは BossEdit シーン、形態は JSON で組み立てる
 // =============================================================================
 class Boss {
 
@@ -190,6 +191,36 @@ public:
 
 	const BossPhaseData& GetPhase() const { return data_.phases[phaseIndex_]; }
 
+	// ---- 攻撃の標準の数値 ----
+
+	// 攻撃の標準の数値（"attacks" の中身と同じ形）。タイムラインのクリップはこれに overrides を重ねて使う
+	TuboEngine::JsonManager::Json GetAttackBaseParams(const std::string& attackId) const;
+	// 攻撃の種類ごとのインスタンス（標準の数値の編集用）
+	const std::vector<std::unique_ptr<BossAttackState>>& GetAttacks() const { return attacks_; }
+
+	// ---- データの編集（BossEdit シーン） ----
+
+	// データを直接書き換える。書き換えたら ApplyDataChanges を呼ぶ
+	BossData& GetData() { return data_; }
+	// 書き換えたデータから抽選用のパターンを作り直す（プレビュー中のパターンはそのまま）
+	void ApplyDataChanges();
+
+	// ---- プレビュー（BossEdit シーン） ----
+
+	// パターンを最初から再生する（ボスは自機の方を向いた状態から始める。自分では次の攻撃を選ばなくなる）
+	void StartPreview(const BossPatternData& pattern);
+	// パターンを最初から time 秒まで進めた状態にする（1/60 秒ずつ計算し直す）
+	void SeekPreview(const BossPatternData& pattern, float time);
+	// プレビューをやめて待機に戻る
+	void StopPreview();
+	bool IsPreviewing() const;
+	// プレビュー中のパターンの経過時間
+	float GetPreviewTime() const;
+
+	// 一時停止（止まっている間も警告範囲は描く）
+	void SetPaused(bool paused) { dePaused_ = paused; }
+	bool IsPaused() const { return dePaused_; }
+
 	// ---- データ（Resources/Boss.json） ----
 
 	// 読み込んで戦闘をはじめからやり直す。ファイルが無ければコードの初期値を使う
@@ -202,6 +233,8 @@ public:
 private:
 
 	// ---- 行動サイクル ----
+	// 状態ごとの更新（描画・オブジェクトの更新は含まない。プレビューの早送りでも使う）
+	void Simulate(float deltaTime);
 	void UpdateIdle(float deltaTime);
 	void UpdateActing(float deltaTime);
 	void UpdateTransition(float deltaTime);
@@ -234,6 +267,8 @@ private:
 	TuboEngine::JsonManager::Json BuildJson() const;
 	// JSON の patterns と攻撃の一覧から、抽選に使うパターンを作る
 	void RebuildPatterns();
+	// 古い形式（連続技・同時攻撃）のパターンをタイムラインに変換する
+	void ConvertLegacyPatterns();
 	// 形態が1つも無いときは、すべての攻撃を使う形態を1つ作る
 	void EnsurePhases();
 
@@ -274,7 +309,9 @@ private:
 	// ---- 攻撃 ----
 	std::vector<std::unique_ptr<BossAttackState>> attacks_;      // 攻撃の種類ごとに1つ
 
-	std::vector<std::unique_ptr<BossAttackPattern>> patterns_;   // 抽選に使うパターン（単発＋JSON の定義）
+	std::vector<std::unique_ptr<BossAttackPattern>> patterns_;   // 抽選に使うパターン（単発＋タイムライン）
+
+	std::unique_ptr<BossAttackPattern> previewPattern_;          // プレビュー中のパターン
 
 	BossAttackPattern* currentPattern_ = nullptr;
 

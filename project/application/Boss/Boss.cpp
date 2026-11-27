@@ -99,12 +99,7 @@ void Boss::Update(float deltaTime) {
 		ApplyLook(GetPhase().look);
 	}
 
-	switch (state_) {
-	case State::Idle:       UpdateIdle(dt);       break;
-	case State::Acting:     UpdateActing(dt);     break;
-	case State::Transition: UpdateTransition(dt); break;
-	case State::Defeated:   UpdateDefeated(dt);   break;
-	}
+	Simulate(dt);
 
 	// HP 以外のきっかけ（今後足す部位破壊など）もここで毎フレーム調べる
 	CheckPhaseTriggers();
@@ -134,6 +129,15 @@ void Boss::Draw() {
 // =============================================================================
 //  行動サイクル
 // =============================================================================
+void Boss::Simulate(float deltaTime) {
+	switch (state_) {
+	case State::Idle:       UpdateIdle(deltaTime);       break;
+	case State::Acting:     UpdateActing(deltaTime);     break;
+	case State::Transition: UpdateTransition(deltaTime); break;
+	case State::Defeated:   UpdateDefeated(deltaTime);   break;
+	}
+}
+
 void Boss::EnterIdle(float waitTime) {
 	state_ = State::Idle;
 	stateTimer_ = 0.0f;
@@ -541,6 +545,7 @@ bool Boss::ResetDataToDefault() {
 void Boss::ApplyJson(const JsonManager::Json& json) {
 	// 攻撃中のものを片付けてから、攻撃を作り直す（数値をコードの初期値に戻してから JSON を反映するため）
 	CancelPattern();
+	previewPattern_.reset();
 	attacks_ = BossAttackRegistry::CreateAll();
 
 	BossData data;
@@ -558,6 +563,7 @@ void Boss::ApplyJson(const JsonManager::Json& json) {
 		}
 	}
 
+	ConvertLegacyPatterns();
 	EnsurePhases();
 	RebuildPatterns();
 	Restart();
@@ -592,29 +598,123 @@ void Boss::EnsurePhases() {
 
 void Boss::RebuildPatterns() {
 	patterns_.clear();
-	currentPattern_ = nullptr;
+	if (!IsPreviewing()) {
+		currentPattern_ = nullptr;
+	}
 
-	// 攻撃名はそのまま単発のパターンとして使える
+	// 攻撃名はそのまま単発のパターンとして使える（硬直はその攻撃の標準の硬直時間）
 	for (const std::unique_ptr<BossAttackState>& attack : attacks_) {
-		patterns_.push_back(std::make_unique<BossAttackPattern>(attack->GetId(), BossAttackPattern::Type::Single, std::vector<BossAttackState*>{attack.get()}));
+		BossPatternData single;
+		single.name = attack->GetId();
+		single.clips.push_back({attack->GetId(), 0.0f, 0, true, JsonManager::Json::object()});
+		patterns_.push_back(std::make_unique<BossAttackPattern>(single, /*useAttackRecovery*/ true));
 	}
 
-	// JSON で定義した連続技・同時攻撃
+	// BossEdit シーンで作ったタイムライン
 	for (const BossPatternData& data : data_.patterns) {
-		std::vector<BossAttackState*> attacks;
-		std::string error;
-		for (const std::string& id : data.attacks) {
-			if (BossAttackState* attack = FindAttack(id)) {
-				attacks.push_back(attack);
-			} else if (error.empty()) {
-				error = "知らない攻撃名です: " + id;
-			}
+		const bool duplicated = FindPattern(data.name) != nullptr;
+		patterns_.push_back(std::make_unique<BossAttackPattern>(data));
+		if (duplicated) {
+			patterns_.back()->SetError("同じ名前のパターン・攻撃がすでにあります: " + data.name);
+		} else if (data.name.empty()) {
+			patterns_.back()->SetError("名前がありません");
 		}
-		if (FindPattern(data.name)) {
-			error = "同じ名前のパターン・攻撃がすでにあります: " + data.name;
-		}
-		patterns_.push_back(std::make_unique<BossAttackPattern>(data.name, BossAttackPattern::TypeFromString(data.type), std::move(attacks), error));
 	}
+}
+
+void Boss::ConvertLegacyPatterns() {
+	for (BossPatternData& data : data_.patterns) {
+		if (!data.clips.empty() || data.legacyAttacks.empty()) {
+			continue;
+		}
+		// 連続技：前の攻撃の終わり（予兆＋攻撃）に次を置く／同時攻撃：全部 0 秒に段を分けて置き、先頭だけボスを動かす
+		const bool parallel = data.legacyType == "Parallel";
+		float time = 0.0f;
+		float lastRecovery = data.recoveryTime;
+		for (size_t i = 0; i < data.legacyAttacks.size(); ++i) {
+			BossTimelineClip clip;
+			clip.attack = data.legacyAttacks[i];
+			clip.start = parallel ? 0.0f : time;
+			clip.track = parallel ? static_cast<int>(i) : 0;
+			clip.controlsBody = !parallel || i == 0;
+			if (BossAttackState* attack = FindAttack(clip.attack)) {
+				attack->SetupContext(*this);
+				time += attack->GetTelegraphLength() + attack->GetAttackLength();
+				if (!parallel || i == 0) {
+					lastRecovery = attack->GetRecoveryLength();
+				}
+			}
+			data.clips.push_back(clip);
+		}
+		data.recoveryTime = lastRecovery;
+		data.legacyAttacks.clear();
+		data.legacyType.clear();
+	}
+}
+
+JsonManager::Json Boss::GetAttackBaseParams(const std::string& attackId) const {
+	JsonManager::Json params = JsonManager::Json::object();
+	if (const BossAttackState* attack = FindAttack(attackId)) {
+		attack->SaveParams(params);
+	}
+	return params;
+}
+
+void Boss::ApplyDataChanges() {
+	if (!IsPreviewing()) {
+		CancelPattern();
+		if (state_ == State::Acting) {
+			EnterIdle(GetPhase().idleTime);
+		}
+	}
+	RebuildPatterns();
+}
+
+// =============================================================================
+//  プレビュー
+// =============================================================================
+void Boss::StartPreview(const BossPatternData& pattern) {
+	CancelPattern();
+	requestedPatterns_.clear();
+	autoAttack_ = false;
+
+	// 移行演出・撃破から戻し、自機の方を向いた状態から始める（毎回同じ結果になるように）
+	if (state_ == State::Transition || state_ == State::Defeated) {
+		ApplyLook(GetPhase().look);
+	}
+	height_ = 0.0f;
+	color_ = kColorNormal;
+	bodyControlEnabled_ = true;
+	SetFacingAngle(std::atan2(targetPosition_.z - center_.z, targetPosition_.x - center_.x));
+
+	previewPattern_ = std::make_unique<BossAttackPattern>(pattern);
+	StartPattern(previewPattern_.get());
+}
+
+void Boss::SeekPreview(const BossPatternData& pattern, float time) {
+	StartPreview(pattern);
+	constexpr float kStep = 1.0f / 60.0f;
+	const int steps = static_cast<int>(std::floor(time / kStep + 0.5f));
+	for (int i = 0; i < steps && IsPreviewing(); ++i) {
+		Simulate(kStep);
+	}
+}
+
+void Boss::StopPreview() {
+	if (IsPreviewing()) {
+		CancelPattern();
+		height_ = 0.0f;
+		color_ = kColorNormal;
+		EnterIdle(0.0f);
+	}
+}
+
+bool Boss::IsPreviewing() const {
+	return previewPattern_ && currentPattern_ == previewPattern_.get();
+}
+
+float Boss::GetPreviewTime() const {
+	return previewPattern_ ? previewPattern_->GetTime() : 0.0f;
 }
 
 BossAttackState* Boss::FindAttack(const std::string& id) const {
@@ -666,7 +766,7 @@ void Boss::DrawImGui() {
 void Boss::DrawImGuiStatus() {
 #ifdef USE_IMGUI
 	static const char* kStateNames[] = {"Idle (待機)", "Acting (攻撃中)", "Transition (移行演出・無敵)", "Defeated (撃破)"};
-	static const char* kStepNames[] = {"Telegraph (予兆)", "Attack (攻撃)", "Recovery (硬直)", "Hold (同時攻撃の待ち)", "Finished"};
+	static const char* kStepNames[] = {"Telegraph (予兆)", "Attack (攻撃)", "Recovery (硬直)", "Finished"};
 
 	// ---- 状態 ----
 	ImGui::Text("Phase  : %d / %d  %s", phaseIndex_ + 1, static_cast<int>(data_.phases.size()), GetPhase().name.c_str());
@@ -690,7 +790,7 @@ void Boss::DrawImGuiStatus() {
 	// 攻撃していないときも同じ行数で表示する（行が消えると下の項目の位置がずれて触りにくいため）
 	const BossAttackState* attack = currentPattern_ ? currentPattern_->GetCurrentAttack() : nullptr;
 	if (currentPattern_) {
-		ImGui::Text("Pattern: %s (%s)", currentPattern_->GetName().c_str(), BossAttackPattern::TypeToString(currentPattern_->GetType()));
+		ImGui::Text("Pattern: %s  %.2f", currentPattern_->GetName().c_str(), currentPattern_->GetTime());
 	} else {
 		ImGui::Text("Pattern: -");
 	}
@@ -773,7 +873,7 @@ void Boss::DrawImGuiData() {
 	if (!deDataMessage_.empty()) {
 		ImGui::Text("%s", deDataMessage_.c_str());
 	}
-	ImGui::TextDisabled("形態・パターンの追加や削除は %s を書き換えて Reload", kBossJsonPath);
+	ImGui::TextDisabled("攻撃パターンは BossEdit シーンで作る。形態の追加や削除は %s を書き換えて Reload", kBossJsonPath);
 
 	// ---- ボス共通 ----
 	if (ImGui::CollapsingHeader("Common (ボス共通)")) {
@@ -831,17 +931,20 @@ void Boss::DrawImGuiData() {
 		}
 	}
 
-	// ---- 連続技・同時攻撃 ----
-	if (ImGui::CollapsingHeader("Patterns (連続技・同時攻撃)")) {
+	// ---- 攻撃パターン（タイムライン） ----
+	if (ImGui::CollapsingHeader("Patterns (攻撃パターン)")) {
 		for (const std::unique_ptr<BossAttackPattern>& pattern : patterns_) {
-			if (pattern->GetType() == BossAttackPattern::Type::Single && pattern->IsValid()) {
+			const BossPatternData& data = pattern->GetData();
+			if (pattern->IsValid() && data.clips.size() == 1 && data.name == data.clips[0].attack) {
 				continue; // 攻撃名の単発は省略
 			}
-			std::string attacks;
-			for (const BossAttackState* attack : pattern->GetAttacks()) {
-				attacks += (attacks.empty() ? "" : (pattern->GetType() == BossAttackPattern::Type::Parallel ? " + " : " → ")) + std::string(attack->GetId());
+			std::string clips;
+			for (const BossTimelineClip& clip : data.clips) {
+				char text[96];
+				snprintf(text, sizeof(text), "%s%s@%.2f", clips.empty() ? "" : ", ", clip.attack.c_str(), clip.start);
+				clips += text;
 			}
-			ImGui::Text("%s [%s] %s", pattern->GetName().c_str(), BossAttackPattern::TypeToString(pattern->GetType()), attacks.c_str());
+			ImGui::Text("%s : %s / 硬直 %.2f", data.name.c_str(), clips.c_str(), data.recoveryTime);
 			if (!pattern->IsValid()) {
 				ImGui::TextColored({1.0f, 0.3f, 0.3f, 1.0f}, "  %s", pattern->GetError().c_str());
 			}

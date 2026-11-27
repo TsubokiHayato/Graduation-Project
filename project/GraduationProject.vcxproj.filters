@@ -91,6 +91,8 @@
     <ClCompile Include="application\Boss\BossAttackSweep.cpp" />
     <ClCompile Include="application\Boss\BossAttackPattern.cpp" />
     <ClCompile Include="application\Boss\BossAttackRegistry.cpp" />
+    <ClCompile Include="application\scene\BossEdit\BossEditScene.cpp" />
+    <ClCompile Include="application\scene\BossEdit\BossTimelineEditor.cpp" />
     <ClCompile Include="BossHitDebugDraw.cpp" />
     <ClCompile Include="BossHitShapes.cpp" />
     <ClCompile Include="BossWarning.cpp" />
@@ -166,6 +168,8 @@
     <ClInclude Include="application\Boss\BossAttackPattern.h" />
     <ClInclude Include="application\Boss\BossAttackRegistry.h" />
     <ClInclude Include="application\Boss\BossData.h" />
+    <ClInclude Include="application\scene\BossEdit\BossEditScene.h" />
+    <ClInclude Include="application\scene\BossEdit\BossTimelineEditor.h" />
     <ClInclude Include="BossWarning.h" />
     <ClInclude Include="BossWarningRenderer.h" />
   </ItemGroup>

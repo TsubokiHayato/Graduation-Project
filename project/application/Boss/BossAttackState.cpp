@@ -19,7 +19,7 @@ TUBO_JSON_DEFINE(BossAttackState::CommonParams, BOSS_ATTACK_COMMON_FIELDS)
 
 namespace {
 // この攻撃がボスの向き・高さ・色を動かしてよいかを、処理の間だけボスに設定する
-// （同時攻撃の従が、主の動きを上書きしないようにする）
+// （ボスを動かさない設定の攻撃が、ほかの攻撃の動きを上書きしないようにする）
 class BodyControlScope {
 public:
 	BodyControlScope(Boss& boss, bool enabled) : boss_(boss), prev_(boss.IsBodyControlEnabled()) { boss_.SetBodyControlEnabled(enabled); }
@@ -37,8 +37,7 @@ private:
 //  進行
 // =============================================================================
 void BossAttackState::Enter(Boss& boss) {
-	BodyControlScope scope(boss, controlsBody_);
-	holdReleased_ = false;
+	BodyControlScope scope(boss, IsBodyEnabled());
 	OnEnter(boss);
 	ChangeStep(boss, Step::Telegraph);
 }
@@ -47,18 +46,9 @@ void BossAttackState::Update(Boss& boss, float deltaTime) {
 	if (step_ == Step::Finished) {
 		return;
 	}
-	BodyControlScope scope(boss, controlsBody_);
+	BodyControlScope scope(boss, IsBodyEnabled());
 	deltaTime_ = deltaTime;
 	stepTimer_ += deltaTime;
-
-	// 同時攻撃の主：ほかの攻撃が終わるまで姿勢を保って待つ
-	if (step_ == Step::Hold) {
-		UpdateHold(boss);
-		if (holdReleased_) {
-			ChangeStep(boss, Step::Recovery);
-		}
-		return;
-	}
 
 	const float duration = GetStepDuration(step_);
 	const float t = StepProgress(duration);
@@ -83,12 +73,13 @@ void BossAttackState::AdvanceStep(Boss& boss) {
 		break;
 	case Step::Attack:
 		if (skipRecovery_) {
-			// 連続技の途中・同時攻撃の従：硬直せずに終わる
+			// パターンの最後に終わる攻撃以外：硬直せずに終わる
 			Finish(boss);
-		} else if (holdBeforeRecovery_ && !holdReleased_) {
-			// 同時攻撃の主：ほかの攻撃が終わるまで待ってから硬直する
-			ChangeStep(boss, Step::Hold);
 		} else {
+			// 硬直の間だけボスを動かす設定なら、硬直に入る処理からボスを動かせるようにする
+			if (controlsBodyInRecovery_) {
+				boss.SetBodyControlEnabled(true);
+			}
 			ChangeStep(boss, Step::Recovery);
 		}
 		break;
@@ -104,7 +95,7 @@ void BossAttackState::Cancel(Boss& boss) {
 	if (step_ == Step::Finished) {
 		return;
 	}
-	BodyControlScope scope(boss, controlsBody_);
+	BodyControlScope scope(boss, IsBodyEnabled());
 	Finish(boss);
 }
 

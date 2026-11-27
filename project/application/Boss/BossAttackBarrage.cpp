@@ -84,6 +84,11 @@ void BossAttackBarrage::OnEnter(Boss& boss) {
 	boss.SetColor(kColorNormal);
 }
 
+void BossAttackBarrage::SetupContext(const Boss& boss) {
+
+	stageRadius_ = boss.GetStageRadius();
+}
+
 float BossAttackBarrage::GetAttackDuration() const {
 
 	const float lastFire = static_cast<float>((std::max)(params_.volleyCount - 1, 0)) * params_.volleyInterval;
