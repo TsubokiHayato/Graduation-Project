@@ -1,7 +1,10 @@
 #pragma once
 #include "IScene.h"
 #include "Camera.h"
+#include "DebugCamera.h"
 #include "Object3d.h"
+#include "Skybox.h"
+#include "SkyBoxCommon.h"
 #include <memory>
 
 // Miyamoto 個人用の作業シーン
@@ -18,6 +21,7 @@ public:
 
 private:
 	std::unique_ptr<TuboEngine::Camera> camera_;
+	std::unique_ptr<TuboEngine::DebugCamera> debugCamera_;
 
 	// 座標軸（動作確認用。不要なら消してOK）
 	std::unique_ptr<TuboEngine::Object3d> axis_;
@@ -26,7 +30,7 @@ private:
 
 	std::unique_ptr<TuboEngine::Object3d> terrain_;
 
-
+	std::unique_ptr<TuboEngine::SkyBox> skybox_;
 
 	TuboEngine::Math::Vector3 stageSize_ = { 10.0f, 0.1f, 10.0f };
 

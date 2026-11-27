@@ -19,6 +19,8 @@ void MiyamotoScene::Initialize()
 	camera_->setScale({1.0f, 1.0f, 1.0f});
 	camera_->Update();
 
+	debugCamera_ = std::make_unique<TuboEngine::DebugCamera>();
+
 	axis_ = std::make_unique<Object3d>();
 	axis_->Initialize("axis/axis.obj");
 	axis_->SetCamera(camera_.get());
@@ -29,6 +31,10 @@ void MiyamotoScene::Initialize()
 	terrain_->SetCamera(camera_.get());
 	terrain_->SetPosition({ 0.0f, 0.0f, 0.0f });
 	terrain_->SetScale(stageSize_);
+
+	skybox_ = std::make_unique<SkyBox>();
+	skybox_->Initialize("DDS/skybox.dds");	
+	skybox_->SetCamera(camera_.get());
 }
 
 // =============================================================================
@@ -67,8 +73,13 @@ void MiyamotoScene::Update()
 	axis_->SetRotation({ 0.0f, angle_, 0.0f });
 
 	camera_->Update();
+	debugCamera_->Update(camera_.get());
 	axis_->Update();
 	terrain_->Update();
+
+	skybox_->SetScale({ 5.0f,5.0f,5.0f });
+
+	skybox_->Update();
 
 	TextManager::GetInstance()->UpdateAll();
 }
@@ -79,6 +90,7 @@ void MiyamotoScene::Update()
 void MiyamotoScene::Object3DDraw() {
 	axis_->Draw();
 	terrain_->Draw();
+	skybox_->Draw();
 }
 
 void MiyamotoScene::SpriteDraw() {
