@@ -108,8 +108,8 @@
     <ClCompile Include="application\Player\Equipment\Shield\Shield.cpp">
       <Filter>application\Player\Equipment\Shield</Filter>
     </ClCompile>
-    <ClCompile Include="application\scene\Player\Equipment\AttackMelee.cpp">
-      <Filter>application\scene\Player\Equipment</Filter>
+    <ClCompile Include="application\Player\Equipment\AttackMelee.cpp">
+      <Filter>application\Player\Equipment</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -193,8 +193,8 @@
     <ClInclude Include="application\Player\Equipment\Shield\Shield.h">
       <Filter>application\Player\Equipment\Shield</Filter>
     </ClInclude>
-    <ClInclude Include="application\scene\Player\Equipment\AttackMelee.h">
-      <Filter>application\scene\Player\Equipment</Filter>
+    <ClInclude Include="application\Player\Equipment\AttackMelee.h">
+      <Filter>application\Player\Equipment</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
