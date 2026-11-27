@@ -23,11 +23,8 @@ void OnoderaScene::Initialize() {
 	player_ = std::make_unique<Player>();
 	player_->Initialize(camera_.get());
 
-	// 装備データ読み込み
-	equipmentDataJson_ = std::make_unique<EquipmentDataJson>();
-	equipmentDataJson_->Load(equipmentData_);
 	// EquipmentManager初期化
-	EquipmentManager::GetInstance()->Initialize(equipmentData_, equipmentDataJson_.get(), camera_.get());
+	EquipmentManager::GetInstance()->Initialize(camera_.get());
 }
 
 // =============================================================================
@@ -68,15 +65,12 @@ void OnoderaScene::ParticleDraw() {}
 void OnoderaScene::ImGuiDraw() {
 #ifdef USE_IMGUI
 	player_->DrawImGui();
-	//シールドオブジェクトの設定
+	// シールドオブジェクトの設定
 	EquipmentManager::GetInstance()->GetShield()->GetShieldObject()->DrawImGui("Shield Object");
 
-	if (ImGui::Begin("Equipment")) {
-		EquipmentManager::GetInstance()->DrawImGui();
-		// 動作確認用のダメージボタン
-		if (ImGui::Button("Test Damage (50)")) {
-			EquipmentManager::GetInstance()->TakeDamage(50.0f, *player_->GetHP(), player_->GetState());
-		}
+	// 各装備のパラメータ制御
+	if (ImGui::Begin("Equipment")) {	
+		EquipmentManager::GetInstance()->DrawImGui(*player_->GetHP(), player_->GetState());
 	}
 	ImGui::End();
 

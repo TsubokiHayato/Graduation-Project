@@ -4,7 +4,6 @@
 #include "Object3d.h"
 #include <memory>
 #include "Player/Player.h"
-#include "Player/Equipment/EquipmentDataJson.h"
 
 // Onodera 個人用の作業シーン
 class OnoderaScene : public IScene {
@@ -23,7 +22,4 @@ private:
 
 	// プレイヤ―
 	std::unique_ptr<Player> player_;
-	// 装備
-	EquipmentData equipmentData_{};
-	std::unique_ptr<EquipmentDataJson> equipmentDataJson_;
 };
