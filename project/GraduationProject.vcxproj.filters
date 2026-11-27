@@ -34,6 +34,9 @@
     <Filter Include="application\Player\Equipment\Shield">
       <UniqueIdentifier>{2ec689f9-1e1f-48e2-9308-98f9c570e664}</UniqueIdentifier>
     </Filter>
+    <Filter Include="application\Player\Equipment\Attack">
+      <UniqueIdentifier>{b2bb7af1-16ef-45c6-8f9f-3e89e39d6153}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -108,8 +111,8 @@
     <ClCompile Include="application\Player\Equipment\Shield\Shield.cpp">
       <Filter>application\Player\Equipment\Shield</Filter>
     </ClCompile>
-    <ClCompile Include="application\Player\Equipment\AttackMelee.cpp">
-      <Filter>application\Player\Equipment</Filter>
+    <ClCompile Include="application\Player\Equipment\Attack\AttackMelee.cpp">
+      <Filter>application\Player\Equipment\Attack</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -193,8 +196,8 @@
     <ClInclude Include="application\Player\Equipment\Shield\Shield.h">
       <Filter>application\Player\Equipment\Shield</Filter>
     </ClInclude>
-    <ClInclude Include="application\Player\Equipment\AttackMelee.h">
-      <Filter>application\Player\Equipment</Filter>
+    <ClInclude Include="application\Player\Equipment\Attack\AttackMelee.h">
+      <Filter>application\Player\Equipment\Attack</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
