@@ -148,56 +148,58 @@ void Shield::ApplySettings(const ShieldData& data) {
 // =========================================
 void Shield::DrawImGui() {
 #ifdef USE_IMGUI
-    ImGui::SeparatorText("Shield");
-    ImGui::Text("Shield : %.1f / %.1f", data_.shield, effectivemaxshield_);
-    float shieldRate = 0.0f;
-    if (effectivemaxshield_ > 0.0f) {
-        shieldRate = data_.shield / effectivemaxshield_;
+//    ImGui::SeparatorText("Shield");
+    if (ImGui::CollapsingHeader("Shield", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Text("Shield : %.1f / %.1f", data_.shield, effectivemaxshield_);
+        float shieldRate = 0.0f;
+        if (effectivemaxshield_ > 0.0f) {
+            shieldRate = data_.shield / effectivemaxshield_;
+        }
+        // シールドゲージ（青色）
+        ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(60.0f / 255.0f, 140.0f / 255.0f, 255.0f / 255.0f, 1.0f));
+        ImGui::ProgressBar(shieldRate, ImVec2(-1.0f, 0.0f));
+        ImGui::PopStyleColor();
+
+        ImGui::Text("Recharge Timer : %.2f", rechargetimer_);
+        ImGui::Text("Recharging : %s", isrecharging_ ? "true" : "false");
+
+        ImGui::Separator();
+
+        // 設定変更前の値を保存
+        float oldMaxShield = data_.maxshield;
+        float oldRechargeTime = data_.rechargetime;
+        float oldRechargeRate = data_.rechargerate;
+        auto oldOffset = data_.offset;
+        bool oldIsVisible = data_.isvisible;
+        bool editing = false;
+
+        // シールド耐久値設定    
+        ImGui::DragFloat("Max Shield", &data_.maxshield, 1.0f);
+        editing = ImGui::IsItemActive();
+        ImGui::DragFloat("Recharge Delay", &data_.rechargetime, 0.1f);
+        editing |= ImGui::IsItemActive();
+        ImGui::DragFloat("Recharge Rate", &data_.rechargerate, 1.0f);
+        editing |= ImGui::IsItemActive();
+
+        ImGui::SeparatorText("Shield Object");
+        // オブジェクト設定
+        ImGui::Checkbox("Display", &data_.isvisible);
+        editing |= ImGui::IsItemActive();
+        ImGui::DragFloat3("Shield Offset", &data_.offset.x, 0.01f);
+        editing |= ImGui::IsItemActive();
+        // =========================================
+        // 設定値が変更されたか判定
+        // =========================================
+        isediting_ =
+            editing ||
+            oldMaxShield != data_.maxshield ||
+            oldRechargeTime != data_.rechargetime ||
+            oldRechargeRate != data_.rechargerate ||
+            oldIsVisible != data_.isvisible ||
+            oldOffset.x != data_.offset.x ||
+            oldOffset.y != data_.offset.y ||
+            oldOffset.z != data_.offset.z;
     }
-    // シールドゲージ（青色）
-    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(60.0f / 255.0f, 140.0f / 255.0f, 255.0f / 255.0f, 1.0f));
-    ImGui::ProgressBar(shieldRate, ImVec2(-1.0f, 0.0f));
-    ImGui::PopStyleColor();
-
-    ImGui::Text("Recharge Timer : %.2f", rechargetimer_);
-    ImGui::Text("Recharging : %s", isrecharging_ ? "true" : "false");
-
-    ImGui::Separator();
-
-    // 設定変更前の値を保存
-    float oldMaxShield = data_.maxshield;
-    float oldRechargeTime = data_.rechargetime;
-    float oldRechargeRate = data_.rechargerate;
-    auto oldOffset = data_.offset;
-    bool oldIsVisible = data_.isvisible;
-    bool editing = false;
-
-    // シールド耐久値設定    
-    ImGui::DragFloat("Max Shield", &data_.maxshield, 1.0f);
-    editing = ImGui::IsItemActive();
-    ImGui::DragFloat("Recharge Delay", &data_.rechargetime, 0.1f);
-    editing |= ImGui::IsItemActive();
-    ImGui::DragFloat("Recharge Rate", &data_.rechargerate, 1.0f);
-    editing |= ImGui::IsItemActive();
-
-    ImGui::SeparatorText("Shield Object");
-    // オブジェクト設定
-    ImGui::Checkbox("Display", &data_.isvisible);
-    editing |= ImGui::IsItemActive();
-    ImGui::DragFloat3("Offset", &data_.offset.x, 0.01f);
-    editing |= ImGui::IsItemActive();
-    // =========================================
-    // 設定値が変更されたか判定
-    // =========================================
-    isediting_ =
-        editing ||
-        oldMaxShield != data_.maxshield ||
-        oldRechargeTime != data_.rechargetime ||
-        oldRechargeRate != data_.rechargerate ||
-        oldIsVisible != data_.isvisible ||
-        oldOffset.x != data_.offset.x ||
-        oldOffset.y != data_.offset.y ||
-        oldOffset.z != data_.offset.z;
 
 #endif
 }
